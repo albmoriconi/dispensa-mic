@@ -1,0 +1,10 @@
+.DS_Store
+.auctex-auto/
+_minted-main/
+*.aux
+*.listing
+*.docx
+*.pdf
+*.log
+*.out
+
