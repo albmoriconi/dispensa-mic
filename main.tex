@@ -9,8 +9,12 @@
 
 \usepackage{tcolorbox}
 \tcbuselibrary{theorems,minted}
-\newtcbtheorem[number within=chapter]{mynote}{Nota}%
-{colback=blue!5,colframe=blue!35!black,fonttitle=\bfseries,before={\vspace{0.5cm}},after={\vspace{0.5cm}}}{note}
+\newtcbtheorem[number within=chapter]{mynote}{Nota}{%
+  colback=blue!5,
+  colframe=blue!35!black,
+  fonttitle=\bfseries,
+  before={\vspace{0.5cm}},
+  after={\vspace{0.5cm}}}{note}
 \newtcblisting{myvhdl}[1]{%
   listing only,
   minted language=vhdl,
@@ -18,6 +22,16 @@
   fonttitle=\bfseries,
   title=#1
 }
+\newcommand{\BashFancyFormatLine}{%
+  \def\FancyVerbFormatLine##1{\$\,##1}%
+}
+\newtcblisting{commandshell}{%
+  colback=black,
+  colupper=white,
+  colframe=yellow!75!black,
+  listing only,
+  minted options={formatcom=\BashFancyFormatLine},
+  minted language=bash}
 
 \usepackage{hyperref}
 
@@ -142,6 +156,8 @@ L'unità operativa dispone di due bus, indicati con \lstinline{B} e
 dell'ALU; il primo ingresso dell'ALU è invece collegato esclusivamente al
 registro \lstinline{H}.
 
+Quasi tutti
+
 \subsection{L'Unità Aritmetico Logica}
 
 L'ALU è controllata mediante sei linee di controllo, che consideriamo asserite
@@ -216,6 +232,12 @@ end package common_defs;
 \chapter{Il Livello ISA}
 
 \section{Macchine a Stack}
+
+\chapter{Installazione}
+
+\begin{commandshell}
+  apt-get install ghdl
+\end{commandshell}
 
 \begin{thebibliography}{2}
   \bibitem{tanenbaum}
