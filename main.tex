@@ -96,7 +96,7 @@ che è tradotta in linguaggio assembly IJVM come
 Lo stato dello stack durante l'esecuzione evolve come in
 fig.~\ref{fig:stack_add}; inizialmente, le locazioni di memoria \lstinline{a2} e
 \lstinline{a3} contengono gli operandi, mentre la locazione \lstinline{a1} è non
-inizializzata; dunque
+inizializzata; dunque:
 \renewcommand{\labelenumi}{(\alph{enumi})}
 \begin{enumerate}
   \item la prima istruzione \lstinline{ILOAD} legge il contenuto della locazione
@@ -117,7 +117,7 @@ inizializzata; dunque
     assegnazione}\label{fig:stack_add}
 \end{figure}
 
-Supponiamo che il processore si trovi al passo (c) e debba eseguire l'operazione
+Supponiamo che il processore si trovi al passo (c) e debba eseguire l'istruzione
 \lstinline{IADD}; per farlo deve, in prima analisi:
 \begin{enumerate}
   \item eseguire un primo accesso in memoria, per prelevare il primo operando;
@@ -127,8 +127,13 @@ Supponiamo che il processore si trovi al passo (c) e debba eseguire l'operazione
   \item eseguire un terzo accesso in memoria, per scrivere il risultato.
 \end{enumerate}
 
-Per capire come è effettivamente possibile implementare queste operazioni, è
-necessario introdurre l'unità operativa del processore.
+L'implementazione del processore Mic-1 che presentiamo è detta in \textit{logica
+  microprogrammata}: ciascuna istruzione IJVM è implementata come una sequenza
+di \textit{microistruzioni}, che complessivamente compongono il
+\textit{microprogramma}, memorizzato in una ROM interna al processore. Per
+capire come è strutturata una microistruzione e come è possibile realizzare un
+microprograma che implementi un set di istruzioni, è necessario introdurre
+anzitutto l'unità operativa del processore.
 
 \section{L'Unità Operativa}
 L'unità operativa del processore che intendiamo progettare comprende l'ALU, i
@@ -156,21 +161,44 @@ L'unità operativa dispone di due bus, indicati con \lstinline{B} e
 dell'ALU; il primo ingresso dell'ALU è invece collegato esclusivamente al
 registro \lstinline{H}.
 
-Quasi tutti
+Con alcune eccezioni (i cui motivi diverranno chiari a breve), i registri
+dispongono di una coppia di segnali di controllo che permettono:
+\begin{itemize}
+    \item di abilitare il collegamento del registro al bus \lstinline{B},
+    rendendolo effettivamente l'operando \lstinline{B} dell'ALU;
+    \item di abilitare la scrittura sul registro del risultato fornito dall'ALU
+    sul bus \lstinline{C}.
+\end{itemize}
+
+Solo un registro può essere collegato al bus \lstinline{B} in un determinato
+istante, mentre il risultato dell'ALU (i.e. il dato sul bus \lstinline{C}) può
+essere scritto su più registri se necessario.
+
+\begin{mynote}{}{}
+  Il collegamento dei registri al bus \lstinline{B} può essere implementato
+  usando porte tri-state o un multiplexer; nel nostro caso, useremo un
+  multiplexer in quanto gli FPGA di cui facciamo uso dispongono di buffer
+  tri-state esclusivamente ai pad di IO.
+\end{mynote}
 
 \subsection{L'Unità Aritmetico Logica}
 
-L'ALU è controllata mediante sei linee di controllo, che consideriamo asserite
-se poste a $1$:
+L'ALU del processore Mic-1 ha due ingressi, che denominiamo \lstinline{A} e
+\lstinline{B}; l'ingresso \lstinline{A} è collegato esclusivamente al registro
+\lstinline{H} (holding), mentre l'ingresso \lstinline{B} è collegato al bus
+omonimo, che può essere guidato dalle nove sorgenti indicate con una freccia
+grigia in fig.~\ref{fig:datapath}; le sue funzioni sono controllate mediante sei
+linee di controllo, che consideriamo asserite se poste a $1$:
 \begin{itemize}
-  \item \lstinline{F0} e \lstinline{F1} determinano l'operazione da eseguire,
-  \item \lstinline{ENA} e \lstinline{ENB} abilitano singolarmente gli ingressi,
-  \item \lstinline{INVA} inverte l'ingresso \lstinline{A},
+  \item \lstinline{F0} e \lstinline{F1} determinano l'operazione da eseguire;
+  \item \lstinline{ENA} e \lstinline{ENB} abilitano singolarmente gli ingressi;
+  \item \lstinline{INVA} inverte l'ingresso \lstinline{A};
   \item \lstinline{INC} incrementa di \lstinline{1} il risultato.
 \end{itemize}
 
-Combinando questi segnali è possibile eseguire le varie funzioni
-dell'ALU;~alcune delle più importanti sono riportate in tab.~\ref{fig:alu_func}.
+Non tutte le combinazioni di questi segnali sono rilevanti; alcune delle più
+importanti per implementare il set di istruzioni IJVM sono riportate in
+tab.~\ref{fig:alu_func}.
 
 \begin{figure}
   \centering
@@ -178,8 +206,18 @@ dell'ALU;~alcune delle più importanti sono riportate in tab.~\ref{fig:alu_func}
   \caption{Segnali di controllo ALU e relative funzioni}\label{fig:alu_func}
 \end{figure}
 
+A questi si aggiungono due segnali di controllo ulteriori, che eseguono lo shift
+del risultato dell'ALU prima che esso venga posto sul bus \lstinline{C}:
+\begin{itemize}
+  \item \lstinline{SLL8} (\textit{Shift Left Logical 8 bit}) esegue lo shift a
+  sinistra di 8 bit, ponendo i bit meno significativi a \lstinline{0};
+  \item \lstinline{SRA1} (\textit{Shift Right Arithmetic 1 bit}) esegue lo shift
+  a destra di 1 bit, con estensione del segno (i.e. il bit più significativo non
+  cambia).
+\end{itemize}
+
 \begin{myvhdl}{alu.vhd}
- entity alu is
+entity alu is
   port (
     --! ALU control
     control       : in  alu_ctrl_type;
@@ -225,13 +263,15 @@ end package common_defs;
 
 \subsection{L'Interfaccia con la Memoria}
 
+Il processore Mic-1 può comunicare con la memoria in due modi differenti:
+\begin{itemize}
+  \item mediante un'interfaccia
+
 \section{Le Microistruzioni}
 
 \section{L'Unità di Controllo}
 
 \chapter{Il Livello ISA}
-
-\section{Macchine a Stack}
 
 \chapter{Installazione}
 
@@ -241,12 +281,12 @@ end package common_defs;
 
 \begin{thebibliography}{2}
   \bibitem{tanenbaum}
-  Andrew S. Tanenbaum e Todd Austin.
+  Andrew S. Tanenbaum and Todd Austin.
   \textit{Structured Computer Organization}.
   Pearson, 2013.
 
   \bibitem{calc}
-  Gianni Conte, Antonino Mazzeo, Nicola Mazzocca e Paolo Prinetto.
+  Gianni Conte, Antonino Mazzeo, Nicola Mazzocca and Paolo Prinetto.
   \textit{Architettura dei Calcolatori}.
   CittàStudi, 2015.
 \end{thebibliography}
