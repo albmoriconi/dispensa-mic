@@ -4,14 +4,18 @@
 
 \usepackage[utf8]{inputenc}
 
+\usepackage{mathtools}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+
 \usepackage{graphicx}
 \graphicspath{{images/}}
 
 \usepackage{tcolorbox}
-\tcbuselibrary{theorems,minted}
+\tcbuselibrary{theorems,minted,breakable}
 \newtcbtheorem[number within=chapter]{mynote}{Nota}{%
   colback=blue!5,
   colframe=blue!35!black,
+  breakable,
   fonttitle=\bfseries,
   before={\vspace{0.5cm}},
   after={\vspace{0.5cm}}}{note}
@@ -20,6 +24,7 @@
   minted language=vhdl,
   minted options=breaklines,
   fonttitle=\bfseries,
+  breakable,
   title=#1
 }
 \newcommand{\BashFancyFormatLine}{%
@@ -28,6 +33,7 @@
 \newtcblisting{commandshell}{%
   colback=black,
   colupper=white,
+  breakable,
   colframe=yellow!75!black,
   listing only,
   minted options={formatcom=\BashFancyFormatLine},
@@ -263,11 +269,67 @@ end package common_defs;
 
 \subsection{L'Interfaccia con la Memoria}
 
-Il processore Mic-1 può comunicare con la memoria in due modi differenti:
+Il processore Mic-1 può comunicare con la memoria mediante due interfacce:
 \begin{itemize}
-  \item mediante un'interfaccia
+  \item \lstinline{MAR} e \lstinline{MDR} controllano un'interfaccia
+  word-addressable a 32 bit;
+  \item \lstinline{PC} e \lstinline{MBR} controllano un'interfaccia
+  byte-addressable a 8 bit.
+\end{itemize}
+In pratica questo significa che scrivendo \lstinline{0x2} nel registro
+\lstinline{PC} e abilitando una lettura, il byte all'indirizzo \lstinline{0x2}
+viene letto e posto negli 8 bit meno significativi del registro \lstinline{MBR};
+scrivendo \lstinline{0x2} nel registro \lstinline{MAR} e abilitando una lettura,
+i 4 byte \lstinline{0x8}-\lstinline{0x11} (i.e. la word di indirizzo
+\lstinline{0x2}) vengono letti e posti nel registro \lstinline{MDR}.
 
 \section{Le Microistruzioni}
+
+Per controllare l'unità operativa del processore, presentata in fig.
+\ref{fig:datapath}, sono necessari 29 segnali:
+\begin{itemize}
+    \item 9 segnali per controllare la scrittura dei dati dal bus \lstinline{C}
+    ai registri;
+    \item 9 segnali per controllare quale registro è collegato al bus
+    \lstinline{B} e va in ingresso all'ALU;
+    \item 2 segnali per abilitare lettura/scrittura sull'interfaccia
+    \lstinline{MAR}/\lstinline{MDR};
+    \item 1 segnale per abilitare il fetch sull'interfaccia
+    \lstinline{PC}/\lstinline{MBR}.
+\end{itemize}
+
+Poiché al più un registro alla volta può essere collegato al registro
+\lstinline{B}, non c'è bisogno di utilizzare effettivamente 9 segnali: dato che
+al più uno di essi può essere asserito, le 10 configurazioni possibili possono
+essere codificate su $\ceil{\log_{2}10} = 4$ bit.
+
+I 24 segnali individuati permettono di controllare l'unità operativa per un
+ciclo di clock; per completare una microistruzione, è necessario aggiungere due
+campi aggiuntivi, che chiamiamo \lstinline{NEXT_ADDRESS} e \lstinline{JAM}, che
+descriveremo approfonditamente quando parleremo dell'unità di controllo; per il
+momento, è sufficiente sapere che sono necessari a determinare la
+microistruzione da eseguire nel ciclo di clock successivo.
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{mu_instr.png}
+  \caption{Il formato delle microistruzioni del Mic-1}\label{fig:mu_instr}
+\end{figure}
+
+In fig.~\ref{fig:mu_instr} è presentato il formato che adotteremo per le
+microistruzioni, rappresentate su 36 bit; come anticipato, ogni microistruzione
+comprende i seguenti campi:
+\begin{itemize}
+  \item \lstinline{Addr} - Indirizzo di una potenziale prossima microistruzione;
+  \item \lstinline{JAM} - Determina come è selezionata la prossima
+  microistruzione;
+  \item \lstinline{ALU} - Controllo dell'ALU e dello shifter;
+  \item \lstinline{C} - Controlla quali registri vengono scritti dal bus
+  \lstinline{C};
+  \item \lstinline{Mem} - Controlla le operazioni di memoria;
+  \item \lstinline{B} - Seleziona il registro connesso al bus \lstinline{B}
+  (codifica in fig.~\ref{fig:mu_instr}).
+\end{itemize}
 
 \section{L'Unità di Controllo}
 
