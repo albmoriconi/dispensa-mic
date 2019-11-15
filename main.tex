@@ -333,6 +333,39 @@ comprende i seguenti campi:
 
 \section{L'Unità di Controllo}
 
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{mic1.png}
+  \caption{Diagramma completo del processore Mic-1}\label{fig:mic1}
+\end{figure}
+
+In fig.~\ref{fig:mic1} è riportato il diagramma completo del processore Mic-1,
+in cui oltre all'unità operativa sono riportate le componenti dell'unità di
+controllo.
+
+L'unità del controllo del Mic-1 si comporta come un \textit{sequencer},
+producendo in ciascun ciclo:
+\begin{enumerate}
+  \item lo stato dei segnali di controllo;
+  \item l'indirizzo della prossima microistruzione da eseguire.
+\end{enumerate}
+
+Il microprogramma è effettivamente memorizzato in una memoria a sola lettura,
+interna al processore, detta \textit{control store}; in prima analisi, il
+control store contiene le microistruzioni del microprogramma allo stesso modo in
+cui la memoria principale contiene le istruzioni (di livello ISA) del programma
+da eseguire.
+
+L'accesso al control store richiede infatti un'interfaccia, controllata dai due
+registri \lstinline{MPC} (MicroProgram Counter) e \lstinline{MIR}
+(MicroInstruction Register); non è necessario un segnale di lettura, in quanto
+il control store è letto continuamente ad ogni ciclo.
+
+Un'importante differenza è legata al fatto che, mentre le istruzioni del
+programma sono eseguite generalmente in ordine sequenziale (a meno ovviamente di
+istruzioni di salto), ciascuna microistruzione specifica esplicitamente
+l'indirizzo della successiva.
+
 \chapter{Il Livello ISA}
 
 \chapter{Installazione}
