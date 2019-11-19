@@ -303,7 +303,9 @@ Il processore Mic-1 può comunicare con la memoria mediante due interfacce:
   Come vedremo in seguito, la prima interfaccia è utilizzata per accedere ai
   dati su cui operano le istruzioni IJVM, rappresentati su 32 bit; la seconda,
   invece, per prelevare le istruzioni IJVM dalla memoria, che possono avere una
-  lunghezza variabile in multipli di byte.
+  lunghezza variabile in multipli di byte (e richiedono dunque più accessi
+  successivi in memoria). Gli indirizzi sono comunque rappresentati su 32 bit
+  per entrambe le interfacce.
 \end{mynote}
 
 Le due interfacce funzionano in modo simile in lettura: l'indirizzo da cui si
@@ -337,6 +339,12 @@ Per controllare l'unità operativa del processore, presentata in fig.
     \lstinline{PC}/\lstinline{MBR}.
 \end{itemize}
 
+\begin{mynote}{}{}
+  Nella nostra implementazione su FPGA, i segnali di lettura per la memoria sono
+  inutili in quanto i device effettivamente utilizzati non li richiedono. Sono
+  stati mantenuti per compatibilità con il formato usato in~\cite{tanenbaum}.
+\end{mynote}
+
 Poiché al più un registro alla volta può essere collegato al registro
 \lstinline{B}, non c'è bisogno di utilizzare effettivamente 9 segnali: dato che
 al più uno di essi può essere asserito, le 10 configurazioni possibili possono
@@ -369,6 +377,75 @@ comprende i seguenti campi:
   \item \lstinline{B} - Seleziona il registro connesso al bus \lstinline{B}
   (codifica in fig.~\ref{fig:mu_instr}).
 \end{itemize}
+
+\subsection{Esempio pratico: l'istruzione \lstinline{IADD}}
+
+Ora che abbiamo un'idea del funzionamento dell'unità operativa e della struttura
+di una microistruzione, possiamo analizzare più nel dettaglio il modo in cui
+viene eseguita un'istruzione IJVM. Consideriamo ad esempio l'istruzione
+\lstinline{IADD}: quando l'abbiamo introdotta, abbiamo detto che ``esegue il pop
+dei due elementi in cima allo stack e il push della loro somma''; questo
+significa che il processore, in prima analisi, dovrebbe eseguire due accessi in
+memoria in lettura, un'operazione di somma con l'ALU ed un accesso in memoria in
+scrittura. In pratica, però, l'implementazione del microprogramma Mic-1 mantiene
+due utili invarianti:
+\begin{itemize}
+  \item il registro \lstinline{SP} (\textit{Stack Pointer}), al termine dell'esecuzione
+  di un'istruzione IJVM, contiene sempre l'indirizzo dell'elemento in testa allo
+  stack;
+  \item il registro \lstinline{TOS} (\textit{Top of Stack}), al termine dell'esecuzione
+  di un'istruzione IJVM, contiene sempre il valore dell'elemento in testa allo
+  stack.
+\end{itemize}
+
+È dunque sufficiente un singolo accesso in memoria, e l'istruzione può essere
+eseguita in tre cicli di clock (i.e.~tre microistruzioni); supponendo che lo
+stack si trovi nello stato in fig.~\ref{fig:stack_add}~(b), per quanto detto in
+precedenza \lstinline{TOS} contiene il valore \lstinline{a3}; da questo stato:
+\begin{enumerate}
+  \item il contenuto di \lstinline{SP} viene decrementato di 1 e scritto sia in
+  \lstinline{SP} che in \lstinline{MAR}, e si avvia l'operazione di lettura; si
+  noti che \lstinline{SP} punta ora alla posizione da cui deve essere letto il
+  valore di \lstinline{a2} e in cui in seguito sarà scritta la somma
+  \lstinline{a2 + a3};
+  \item il contenuto di \lstinline{TOS} è posto nel registro \lstinline{H};
+  \item i dati contenuti in \lstinline{TOS} e \lstinline{MDR} (dato proveniente
+  dalla memoria) sono sommati e posti sia in \lstinline{TOS} che in
+  \lstinline{MDR}, si avvia una operazione di scrittura.
+\end{enumerate}
+È possibile verificare manualmente che queste operazioni rispettano le
+invarianti enunciate in precedenza, e che il valore in cima allo stack è ora
+proprio la somma dei due operandi che vi erano stati posti in precedenza.
+
+Trascurando per ora i campi \lstinline{Addr} e \lstinline{JAM}, siamo in grado
+di codificare le microistruzioni:
+\begin{enumerate}
+  \item
+  \begin{itemize}
+    \item \lstinline{ALU}: \lstinline{110110} (decremento dell'operando \lstinline{B});
+    \item \lstinline{C}: \lstinline{000001001} (bus \lstinline{C} scrive su
+    \lstinline{SP} e \lstinline{MAR});
+    \item \lstinline{Mem}: \lstinline{010} (lettura dati);
+    \item \lstinline{B}: \lstinline{0100} (\lstinline{SP} controlla il bus \lstinline{B}).
+  \end{itemize}
+  \item
+  \begin{itemize}
+    \item \lstinline{ALU}: \lstinline{010100} (l'operando \lstinline{B} passa invariato);
+    \item \lstinline{C}: \lstinline{100000000} (bus \lstinline{C} scrive su
+    \lstinline{H});
+    \item \lstinline{Mem}: \lstinline{000} (nessuna operazione di memoria);
+    \item \lstinline{B}: \lstinline{0111} (\lstinline{TOS} controlla il bus \lstinline{B}).
+  \end{itemize}
+  \item
+  \begin{itemize}
+    \item \lstinline{ALU}: \lstinline{111100} (somma degli operandi
+    \lstinline{A} e \lstinline{B});
+    \item \lstinline{C}: \lstinline{001000010} (bus \lstinline{C} scrive su
+    \lstinline{MDR} e \lstinline{TOS});
+    \item \lstinline{Mem}: \lstinline{100} (scrittura dati);
+    \item \lstinline{B}: \lstinline{0000} (\lstinline{MDR} controlla il bus \lstinline{B}).
+  \end{itemize}
+\end{enumerate}
 
 \section{L'Unità di Controllo}
 
