@@ -418,7 +418,7 @@ invarianti enunciate in precedenza, e che il valore in cima allo stack è ora
 proprio la somma dei due operandi che vi erano stati posti in precedenza.
 
 Trascurando per ora i campi \lstinline{Addr} e \lstinline{JAM}, siamo in grado
-di codificare le microistruzioni:
+di codificare gli altri campi delle microistruzioni:
 \begin{enumerate}
   \item
   \begin{itemize}
@@ -447,6 +447,60 @@ di codificare le microistruzioni:
   \end{itemize}
 \end{enumerate}
 
+\subsection{Il linguaggio MAL: parte 1}
+
+Scrivendo a mano le microistruzioni, come nell'esempio precedente, è molto
+semplice commettere errori; inoltre, il microprogramma così ottenuto sarebbe
+praticamente impossibile da comprendere all'occhio umano.
+
+\begin{figure}
+  \centering
+  \includegraphics[width=0.5\textwidth]{mal_ops.png}
+  \caption{Le operazioni permesse nel linguaggio MAL}\label{fig:mal_ops}
+\end{figure}
+
+Il linguaggio usato in~\cite{tanenbaum} per la scrittura del microprogramma è
+denominato MAL (\textit{MicroAssembly Language}). Introduciamo anzitutto la
+notazione necessaria a specificare il controllo dei bus \lstinline{B} e
+\lstinline{C} e dell'ALU; le operazioni permesse sono riportate in
+fig.~\ref{fig:mal_ops}, dove \lstinline{SOURCE} è uno dei registri connessi al
+bus \lstinline{B} e \lstinline{DEST} una combinazione di registri connessi al
+bus \lstinline{C}, eventualmente separati dal simbolo \lstinline{=}; ad esempio,
+per incrementare il contenuto del registro \lstinline{SP} e scriverlo sia in
+\lstinline{SP} che in \lstinline{MAR}, si scrive:
+
+\begin{lstlisting}
+  SP = MAR = SP + 1
+\end{lstlisting}
+
+A ciascuna di queste operazioni può essere applicato uno shift a sinistra di 1 byte
+aggiungendo \lstinline{<< 8}, ad esempio:
+
+\begin{lstlisting}
+  H = MBR << 8
+\end{lstlisting}
+
+Una seconda parte della microistruzione, separata dalla precedente da un punto e
+virgola (\lstinline{;}), riguarda le istruzioni di memoria; lettura e scrittura
+sull'interfaccia dati sono indicate rispettivamente da \lstinline{rd} o
+\lstinline{wr}, mentre la lettura sull'interfaccia istruzioni è indicata da
+\lstinline{fetch}; in una singola microistruzione è possibile avere
+un'operazione per ciascuna delle due interfacce, eventualmente separate da
+\lstinline{;}.
+
+A questo punto siamo in grado effettivamente di tradurre in linguaggio MAL le
+microistruzioni dell'istruzione \lstinline{IADD}:
+
+\begin{lstlisting}
+  MAR = SP = SP - 1; rd
+  H = TOS
+  MDR = TOS = MDR + H; wr
+\end{lstlisting}
+
+Questo frammento di microprogramma è tuttavia incompleto; per capire la funzione
+dei campi \lstinline{Addr} e \lstinline{JAM} è necessario introdurre l'unità di
+controllo del Mic-1.
+
 \section{L'Unità di Controllo}
 
 \begin{figure}
@@ -459,7 +513,7 @@ In fig.~\ref{fig:mic1} è riportato il diagramma completo del processore Mic-1,
 in cui oltre all'unità operativa sono riportate le componenti dell'unità di
 controllo.
 
-L'unità del controllo del Mic-1 si comporta come un \textit{sequencer},
+L'unità di controllo del Mic-1 si comporta come un \textit{sequencer},
 producendo in ciascun ciclo:
 \begin{enumerate}
   \item lo stato dei segnali di controllo;
@@ -467,22 +521,102 @@ producendo in ciascun ciclo:
 \end{enumerate}
 
 Il microprogramma è effettivamente memorizzato in una memoria a sola lettura,
-interna al processore, detta \textit{control store}; in prima analisi, il
-control store contiene le microistruzioni del microprogramma allo stesso modo in
-cui la memoria principale contiene le istruzioni (di livello ISA) del programma
-da eseguire.
+interna al processore, detta \textit{control store}; in pratica, il control
+store contiene le microistruzioni del microprogramma allo stesso modo in cui la
+memoria principale contiene le istruzioni (di livello ISA) del programma da
+eseguire.
 
-L'accesso al control store richiede infatti un'interfaccia, controllata dai due
-registri \lstinline{MPC} (MicroProgram Counter) e \lstinline{MIR}
-(MicroInstruction Register); non è necessario un segnale di lettura, in quanto
-il control store è letto continuamente ad ogni ciclo.
+Anche l'accesso al control store richiede un'interfaccia, controllata dai due
+registri \lstinline{MPC} (\textit{MicroProgram Counter}) e \lstinline{MIR}
+(\textit{MicroInstruction Register}); non è necessario un segnale di lettura, in
+quanto il control store è letto continuamente ad ogni ciclo.
 
 Un'importante differenza è legata al fatto che, mentre le istruzioni del
 programma sono eseguite generalmente in ordine sequenziale (a meno ovviamente di
 istruzioni di salto), ciascuna microistruzione specifica esplicitamente
-l'indirizzo della successiva.
+l'indirizzo della successiva, riportandolo nel campo \lstinline{Addr}.
 
-\chapter{Il Livello ISA}
+Le microistruzioni forniscono tuttavia un supporto al controllo dei salti
+mediante il campo \lstinline{JAM}; i due bit \lstinline{JAMN} e \lstinline{JAMZ}
+sono combinati con i valori dei flag \lstinline{N} e \lstinline{Z} dell'ALU, e
+permettono di modificare il bit più significativo dell'\lstinline{MPC}:
+
+\begin{lstlisting}
+  MPC[8] = (JAMZ AND Z) OR (JAMN AND N) OR Add[8]
+\end{lstlisting}
+
+Inoltre, se il bit \lstinline{JMPC} è asserito, gli 8 bit meno significativi di
+\lstinline{MPC} sono messi in \lstinline{OR} bit-a-bit con gli 8 bit contenuti
+nel registro \lstinline{MBR}.
+
+\subsection{Il linguaggio MAL: parte 2}
+
+Possiamo a questo punto introdurre le parti mancanti del linguaggio MAL;
+osserviamo anzitutto il microcodice completo per l'istruzione \lstinline{IADD}:
+
+\begin{lstlisting}
+  iadd = 0x65:
+      MAR = SP = SP - 1; rd
+      H = TOS
+      MDR = TOS = MDR + H; wr; goto main
+\end{lstlisting}
+
+Abbiamo anzitutto aggiunto una label, \lstinline{iadd}, che permette di
+identificare la locazione del control store, seguita dall'indirizzo nel control
+store a partire dal quale verra posizionato il microcodice seguente (dunque
+0x65-0x67); in assenza di indicazioni esplicite, il campo \lstinline{Addr}
+contiene semplicemente l'indirizzo della microistruzione successiva (dunque in
+questo caso, le prime due istruzioni, situate agli indirizzi 0x65 e 0x66 nel
+control store, avranno campo \lstinline{Addr} posto rispettivamente a 0x66 e
+0x67).
+
+Consideriamo invece l'ultima microistruzione; abbiamo aggiunto un'ulteriore
+parte alla microistruzione, che influenza il suo campo \lstinline{Addr}:
+
+\begin{lstlisting}
+  goto main
+\end{lstlisting}
+
+indica al programma microassemblatore, che traduce il linguaggio MAL nel formato
+delle microistruzioni, che il campo \lstinline{Addr} per questa microistruzione
+deve essere posto uguale all'indirizzo della microistruzione che ha come label
+\lstinline{main}.
+
+Osserviamo anche il microcodice relativo alla label \lstinline{main}:
+
+\begin{lstlisting}
+  main:
+      PC = PC + 1; fetch; goto (MBR)
+\end{lstlisting}
+
+Questa microistruzione è particolarmente importante, in quanto ogni istruzione
+IJVM si conclude tornando ad essa; la sua funziona è incrementare il program
+counter, fare il fetch del successivo byte di istruzione e usare questo byte
+come prossimo valore del microprogram counter; il campo
+
+\begin{lstlisting}
+  goto (MBR)
+\end{lstlisting}
+
+è codificato usando il bit \lstinline{JMPC} nel campo \lstinline{JAM}.
+
+È chiaro da quanto detto che l'indirizzo che assegniamo ad una istruzione IJVM
+nel control store deve essere uguale alla sua codifica in linguaggio macchina
+prodotta dall'assemblatore IJVM: l'istruzione \lstinline{IADD} è codificata come
+\lstinline{0x65}, e memorizzata proprio all'indirizzo \lstinline{0x65} nel
+control store; quando la microistruzione \lstinline{main} esegue il fetch del
+byte \lstinline{0x65}, l'\lstinline{MPC} è settato a \lstinline{0x65} e il
+microcodice relativo all'istruzione \lstinline{IADD} viene eseguito.
+
+Per concludere, il controllo di flusso basato sui flag dell'ALU è scritto in
+linguaggio MAL come:
+
+\begin{lstlisting}
+  if (flag) goto T; else goto F
+\end{lstlisting}
+
+dove \lstinline{flag} può essere \lstinline{N} o \lstinline{Z}, mentre
+\lstinline{T} e \lstinline{F} sono due label.
 
 \chapter{Installazione}
 
