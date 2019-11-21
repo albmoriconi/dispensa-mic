@@ -40,8 +40,7 @@
   listing only,
   before={\vspace{0.5cm}},
   after={\vspace{0.5cm}},
-  minted options={formatcom=\BashFancyFormatLine},
-  minted language=bash}
+  minted options={formatcom=\BashFancyFormatLine}}
 
 \usepackage{hyperref}
 
@@ -49,6 +48,7 @@
 \usepackage{listings}
 \lstset{
   basicstyle=\ttfamily,
+  breaklines=true
 }
 
 \title{Il Processore Mic-1 \\
@@ -620,8 +620,75 @@ dove \lstinline{flag} può essere \lstinline{N} o \lstinline{Z}, mentre
 
 \chapter{Installazione}
 
+Per installare il microassemblatore \lstinline{mal} e l'assemblatore
+\lstinline{ajvm} è anzitutto necessario installare il version control system Git
+ed il build system Gradle; inoltre, per alcuni task useremo il build system
+Cmake. La procedura può variare leggermente a seconda del sistema operativo
+usato, ma in una tipica distribuzione Linux Debian-based (come Ubuntu) è
+sufficiente eseguire:
+
 \begin{commandshell}
-  apt-get install ghdl
+  sudo apt install git gradle cmake
+\end{commandshell}
+
+Conviene dunque creare una nuova cartella per i repository da scaricare, e
+posizionarvici; al suo interno, creeremo anche una directory per i tool compilati:
+
+\begin{commandshell}
+  mkdir esercitazione_mic
+  cd esercitazione_mic
+  mkdir tools
+\end{commandshell}
+
+È possibile a questo punto compilare i tool (ignorando eventuali warning in fase
+di test):
+
+\begin{commandshell}
+  git clone https://github.com/albmoriconi/mal.git
+  cd mal
+  ./gradlew build
+  cd ..
+  git clone https://github.com/albmoriconi/ajvm.git
+  cd ajvm
+  ./gradlew build
+  cd ..
+  tar -xvf mal/build/distributions/mal.tar -C tools/
+  tar -xvf ajvm/build/distributions/ajvm.tar -C tools/
+\end{commandshell}
+
+Per poter usare i tool nella shell attiva, le loro directory vanno aggiunte al
+path di ricerca dei binari; il comando seguente può essere aggiunto al proprio
+profilo della shell o eseguito direttamente da riga di comando (in questo caso,
+deve essere eseguito nuovamente ogni volta che si apre una nuova shell, o i tool
+non saranno trovati):
+
+\begin{lstlisting}
+  PATH="$HOME/esercitazione_mic/tools/ajvm/bin:$HOME/esercitazione_mic/tools/mal/bin:$PATH"
+\end{lstlisting}
+
+Infine, è possibile eseguire il clone del repository contenente il codice VHDL
+del processore, e predisporne la directory per la build:
+
+\begin{commandshell}
+  git clont https://github.com/albmoriconi/amic-0.git
+  cd amic-0
+  mkdir build
+  cd build
+  cmake ..
+\end{commandshell}
+
+Dalla directory build è ora possibile lanciare il tool \lstinline{make} con una
+serie di target utili per lanciare microassemblatore, assemblatore e alcuni
+test.
+
+In particolare, è possibile editare il microprogramma in linguaggio MAL e il
+programma in linguaggio IJVM situati rispettivamente nelle directory
+\lstinline{src/main/mal} e \lstinline{src/main/ajvm} e dunque rigenerare control
+store e RAM lanciando, dalla directory \lstinline{build}, i target:
+
+\begin{commandshell}
+  make create_control_store
+  make create_ram
 \end{commandshell}
 
 \begin{thebibliography}{2}
