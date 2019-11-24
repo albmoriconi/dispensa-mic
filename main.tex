@@ -274,59 +274,78 @@ L'interfaccia \lstinline{MAR}/\lstinline{MDR} dispone inoltre di un segnale di
 clock, indica alla memoria di scrivere il dato contenuto in \lstinline{MDR}
 all'indirizzo contenuto in \lstinline{MAR}.
 
+\begin{figure}
+  \centering
+  \includegraphics[width=0.5\textwidth]{mem_prot.png}
+  \caption{Protocollo di scrittura e lettura sull'interfaccia
+    \lstinline{MAR}/\lstinline{MDR}}\label{fig:mem_prot}
+\end{figure}
+
+Il protocollo per l'interfaccia a 32 bit è mostrato in fig.~\ref{fig:mem_prot};
+per eseguire una scrittura, l'indirizzo e il dato devono essere disponibili nei
+registri \lstinline{MAR} e \lstinline{MDR} al fronte di salita in cui è alto il
+segnale \lstinline{WE}; quando si opera in lettura (\lstinline{WE} basso), il
+dato è disponibile nel registro \lstinline{MDR} al fronte di clock successivo
+rispetto a quello in cui l'indirizzo è posto nel registro \lstinline{MAR}.
+
 \subsection{Implementazione VHDL dell'Unità Operativa}
 
-L'implementazione dell'unità operativa richiede sostanzialmente di codificare in
-VHDL tre componenti:
+L'implementazione dell'unità operativa richiede di codificare in VHDL tre
+parti principali:
 \begin{itemize}
   \item i registri;
   \item i bus;
   \item l'ALU
 \end{itemize}
 
+\begin{mynote}{}{}
+  Per il momento lasceremo in sospeso la struttura dell'entity relativa
+  all'unità operativa, in quanto per capire quali segnali vengono esposti e
+  perché è utile aver prima compreso anche il funzionamento dell'unità di
+  controllo.
+\end{mynote}
+
 \subsubsection{Implementazione dei Registri}
 
-I registri dell'unità operativa sono implementati mediante un singolo process
-\lstinline{reg_proc}, che ne gestisce la logica di reset e di scrittura mediante
+I registri dell'unità operativa sono implementati mediante un singolo
+\lstinline{process}, che ne gestisce la logica di reset e di scrittura mediante
 il bus \lstinline{C}:
 
 \begin{myvhdl}{datapath.vhd}
-  architecture behavioral of datapath is
+-- Registers
+signal sp_reg   : reg_data_type;
+signal lv_reg   : reg_data_type;
+signal cpp_reg  : reg_data_type;
 
-  -- Registers
-  signal sp_reg   : reg_data_type;
-  signal lv_reg   : reg_data_type;
-  signal cpp_reg  : reg_data_type;
+[...]
 
-  [...]
+-- Processor registers
+reg_proc : process(clk) is
+begin
+  if rising_edge(clk) then
+    if reset = '1' then
+      sp_reg  <= x"00000101";
+      lv_reg  <= x"00000100";
+      cpp_reg <= x"00000080";
 
-  -- Processor registers
-  reg_proc : process(clk) is
-  begin
-    if rising_edge(clk) then
-      if reset = '1' then
-        sp_reg  <= x"00000101";
-        lv_reg  <= x"00000100";
-        cpp_reg <= x"00000080";
+      [...]
 
-        [...]
-
-      else
-        if c_to_reg_control(c_ctrl_mar) = '1' then
-          mar_reg <= c_bus;
-        end if;
-        if c_to_reg_control(c_ctrl_pc) = '1' then
-          pc_reg <= c_bus;
-        end if;
-        if c_to_reg_control(c_ctrl_sp) = '1' then
-          sp_reg <= c_bus;
-        end if;
-
-        [...]
-
+    else
+      if c_to_reg_control(c_ctrl_mar) = '1' then
+        mar_reg <= c_bus;
       end if;
+      if c_to_reg_control(c_ctrl_pc) = '1' then
+        pc_reg <= c_bus;
+      end if;
+      if c_to_reg_control(c_ctrl_sp) = '1' then
+        sp_reg <= c_bus;
+      end if;
+
+      [...]
+
     end if;
-  end process reg_proc;
+  end if;
+end process reg_proc;
 \end{myvhdl}
 
 Il tipo \lstinline{reg_data_type} è introdotto come abbreviazione per un
@@ -335,29 +354,49 @@ definito, insieme ad altri tipi utili per l'implementazione del processore, nel
 file \lstinline{common_defs.vhd}:
 
 \begin{myvhdl}{common\_defs.vhd}
-package common_defs is
-  -- Data widths
-  --! Processor register data width
-  constant reg_data_width      : positive := 32;
+-- Data widths
+--! Processor register data width
+constant reg_data_width      : positive := 32;
 
-  [...]
+[...]
 
-  -- Subtypes
-  --! Processor register data
-  subtype reg_data_type is std_logic_vector(reg_data_width - 1 downto 0);
-
-  [...]
-
-end package common_defs;
+-- Subtypes
+--! Processor register data
+subtype reg_data_type is std_logic_vector(reg_data_width - 1 downto 0);
 \end{myvhdl}
 
+Il segnale \lstinline{c_to_reg_control} è di tipo \lstinline{c_ctrl_type},
+anch'esso definito nel file \lstinline{common_defs.vhd}, ed è indicizzato
+mediante una serie di costanti relative agli indici dei singoli segnali di
+attivazione:
 
-\subsubsection{Implementazione dei Bus}
+\begin{myvhdl}{common\_defs.vhd}
+--! C bus control width
+constant c_ctrl_width        : positive := 9;
+
+[...]
+
+--! C bus control type
+subtype c_ctrl_type is std_logic_vector(c_ctrl_width - 1 downto 0);
+
+[...]
+
+--! C control MAR bit
+constant c_ctrl_mar        : natural := 0;
+--! C control MDR bit
+constant c_ctrl_mdr        : natural := 1;
+--! C control PC bit
+constant c_ctrl_pc         : natural := 2;
+--! C control SP bit
+constant c_ctrl_sp         : natural := 3;
+
+[...]
+\end{myvhdl}
 
 \subsubsection{Implementazione dell'ALU}
 
-In VHDL, l'\textit{entity declaration} per l'ALU così descritta può essere
-scritta come:
+In VHDL, l'entity declaration per l'ALU che abbiamo descritto può essere scritta
+come:
 
 \begin{myvhdl}{alu.vhd}
 entity alu is
@@ -376,6 +415,57 @@ entity alu is
     zero_flag     : out std_logic
     );
 end entity alu;
+\end{myvhdl}
+
+L'implementazione realizzata è puramente behavioral.
+
+\subsubsection{Implementazione dei Bus}
+
+In prima analisi, i bus sono implementati come dei \lstinline{signal}
+VHDL:
+
+\begin{myvhdl}{datapath.vhd}
+-- Signals
+signal a_bus : reg_data_type;
+signal b_bus : reg_data_type;
+signal c_bus : reg_data_type;
+\end{myvhdl}
+
+Punto critico nell'implementazione dei bus è però la disciplina di accesso
+utilizzata. Per quanto riguarda \lstinline{A}, si tratta semplicemente
+dell'insieme di fili che collega il registro \lstinline{H} al primo ingresso
+dell'ALU; il bus \lstinline{C} invece è collegato all'uscita dello shifter della
+componente ALU:
+
+\begin{myvhdl}{datapath.vhd}
+-- ALU instantiation
+alu : entity work.alu
+  port map (
+    control       => alu_control,
+    operand_a     => a_bus,
+    operand_b     => b_bus,
+    sh_result     => c_bus,
+    negative_flag => alu_n_flag,
+    zero_flag     => alu_z_flag);
+\end{myvhdl}
+
+Come abbiamo visto nella sezione relativa ai registri, il bus \lstinline{C} è
+connesso a tutti i registri e un segnale di abilitazione per ciascuno di essi
+funge da abilitazione in scrittura. Infine, il bus \lstinline{B} è implementato
+mediante un multiplexer, implementato usando il costrutto VHDL \lstinline{with}:
+
+\begin{myvhdl}{datapath.vhd}
+with reg_to_b_control select b_bus <=
+  mdr_reg         when b_ctrl_mdr,
+  pc_reg          when b_ctrl_pc,
+  mbr_s           when b_ctrl_mbr,
+  mbr_u           when b_ctrl_mbru,
+  sp_reg          when b_ctrl_sp,
+  lv_reg          when b_ctrl_lv,
+  cpp_reg         when b_ctrl_cpp,
+  tos_reg         when b_ctrl_tos,
+  opc_reg         when b_ctrl_opc,
+  (others => '0') when others;
 \end{myvhdl}
 
 \section{Le Microistruzioni}
@@ -509,7 +599,7 @@ praticamente impossibile da comprendere all'occhio umano.
 
 \begin{figure}
   \centering
-  \includegraphics[width=0.5\textwidth]{mal_ops.png}
+  \includegraphics[width=0.3\textwidth]{mal_ops.png}
   \caption{Le operazioni permesse nel linguaggio MAL}\label{fig:mal_ops}
 \end{figure}
 
@@ -672,6 +762,100 @@ linguaggio MAL come:
 dove \lstinline{flag} può essere \lstinline{N} o \lstinline{Z}, mentre
 \lstinline{T} e \lstinline{F} sono due label.
 
+\subsection{Implementazione dell'Unità di Controllo}
+
+Il control store presenta un'interfaccia molto semplice:
+
+\begin{myvhdl}{control\_store.vhd}
+entity control_store is
+  port (
+    --! Address of the desired word
+    address : in  ctrl_str_addr_type;
+    --! Content of the addressed word
+    word    : out ctrl_str_word_type
+    );
+end entity control_store;
+\end{myvhdl}
+
+Le microistruzioni sono inserite direttamente all'interno del codice:
+
+\begin{myvhdl}{control\_store.vhd}
+constant words : ctrl_str_type := (
+--BEGIN_WORDS_ENTRY
+0 => "000000110000000000000000000000001001",
+1 => "010111100000000000000000000000001001",
+2 => "000000000000000000000000000000000000",
+
+[...]
+
+--END_WORDS_ENTRY
+);
+\end{myvhdl}
+
+Tutti i tipi sono definiti, come negli altri casi, nel file
+\lstinline{common\_defs.vhd}:
+
+\begin{myvhdl}{common\_defs.vhd}
+--! Control store address
+subtype ctrl_str_addr_type is std_logic_vector(ctrl_str_addr_width - 1 downto 0);
+--! Control store word
+subtype ctrl_str_word_type is std_logic_vector(ctrl_str_word_width - 1 downto 0);
+
+[...]
+
+--! Control store word
+subtype ctrl_str_word_type is std_logic_vector(ctrl_str_word_width - 1 downto 0);
+
+[...]
+
+--! Control store content
+type ctrl_str_type is array (ctrl_str_words - 1 downto 0) of ctrl_str_word_type;
+\end{myvhdl}
+
+L'implementazione del control store è molto semplice: un \lstinline{process}
+aggiorna il registro \lstinline{MIR} con la microistruzione corrente, i cui bit
+del campo \lstinline{Addr}, opportunamente mascherati, costituiscono il registro
+``virtuale'' \lstinline{MPC}:
+
+\begin{myvhdl}{control\_unit.vhd}
+-- Registers
+reg_proc : process(clk) is
+begin
+  if rising_edge(clk) then
+    if reset = '1' then
+      mir_reg <= "000000001000000000000000000000001001";
+      n_ff    <= '0';
+      z_ff    <= '0';
+    else
+      mir_reg <= control_store_word;
+      n_ff    <= alu_n_flag;
+      z_ff    <= alu_z_flag;
+    end if;
+  end if;
+end process reg_proc;
+
+-- MPC virtual register
+ctrl_nxt_addr_no_msb <= mir_reg(ctrl_nxt_addr_no_msb_type'range);
+jmpc_addr <= ctrl_nxt_addr_no_msb or mbr_reg_in when mir_reg(ctrl_jmpc) = '1' else ctrl_nxt_addr_no_msb;
+high_bit <= (alu_n_flag and mir_reg(ctrl_jamn)) or (alu_z_flag and mir_reg(ctrl_jamz));
+mpc_virtual_reg <= (mir_reg(ctrl_nxt_addr_msb) or high_bit) & jmpc_addr;
+\end{myvhdl}
+
+Il decoder per la selezione del registro che controlla il bus \lstinline{B} è
+implementato come un \lstinline{process} puramente combinatorio:
+\begin{myvhdl}{control\_unit.vhd}
+-- B_BUS control decoder
+reg_to_b_decoder : process(mir_reg(ctrl_b'range)) is
+begin
+  reg_to_b_decoder_out <= (others => '0');
+
+  if unsigned(mir_reg(ctrl_b'range)) < b_ctrl_width then
+    reg_to_b_decoder_out(to_integer(
+      unsigned(mir_reg(ctrl_b'range)))) <= '1';
+  end if;
+end process reg_to_b_decoder;
+\end{myvhdl}
+
 \chapter{Installazione}
 
 Per installare il microassemblatore \lstinline{mal} e l'assemblatore
@@ -724,7 +908,7 @@ Infine, è possibile eseguire il clone del repository contenente il codice VHDL
 del processore, e predisporne la directory per la build:
 
 \begin{commandshell}
-  git clont https://github.com/albmoriconi/amic-0.git
+  git clone https://github.com/albmoriconi/amic-0.git
   cd amic-0
   mkdir build
   cd build
