@@ -217,7 +217,7 @@ tab.~\ref{fig:alu_func}.
 
 \begin{figure}
   \centering
-  \includegraphics[width=0.7\textwidth]{alu_func.png}
+  \includegraphics[width=0.6\textwidth]{alu_func.png}
   \caption{Segnali di controllo ALU e relative funzioni}\label{fig:alu_func}
 \end{figure}
 
@@ -238,56 +238,6 @@ ulteriori:
   \item il flag \lstinline{N} è posto a 1 se il risultato è negativo;
   \item il flag \lstinline{Z} è posto a 1 se il risultato è 0.
 \end{itemize}
-
-In VHDL, l'\textit{entity declaration} per l'ALU così descritta può essere
-scritta come:
-
-\begin{myvhdl}{alu.vhd}
-entity alu is
-  port (
-    --! ALU control
-    control       : in  alu_ctrl_type;
-    --! ALU operand A
-    operand_a     : in  reg_data_type;
-    --! ALU operand B
-    operand_b     : in  reg_data_type;
-    --! ALU result
-    sh_result     : out reg_data_type;
-    --! Negative flag
-    negative_flag : out std_logic;
-    --! Zero flag
-    zero_flag     : out std_logic
-    );
-end entity alu;
-\end{myvhdl}
-
-I tipi \lstinline{alu_ctrl_type} e \lstinline{reg_data_type} non sono tipi
-standard VHDL, ma sono definiti nel file \lstinline{common_defs.vhd}:
-
-\begin{myvhdl}{common\_defs.vhd}
-package common_defs is
-  -- Data widths
-  --! Processor register data width
-  constant reg_data_width      : positive := 32;
-  --! MBR register data width
-  constant mbr_data_width      : positive := 8;
-  --! ALU control width
-  constant alu_ctrl_width      : positive := 8;
-
-  [...]
-
-  -- Subtypes
-  --! Processor register data
-  subtype reg_data_type is std_logic_vector(reg_data_width - 1 downto 0);
-  --! MBR register data
-  subtype mbr_data_type is std_logic_vector(mbr_data_width - 1 downto 0);
-  --! ALU control type
-  subtype alu_ctrl_type is std_logic_vector(alu_ctrl_width - 1 downto 0);
-
-  [...]
-
-end package common_defs;
-\end{myvhdl}
 
 \subsection{L'Interfaccia con la Memoria}
 
@@ -323,6 +273,110 @@ L'interfaccia \lstinline{MAR}/\lstinline{MDR} dispone inoltre di un segnale di
 \textit{write enable} (\lstinline{WE}) che, se asserito al fronte di salita di
 clock, indica alla memoria di scrivere il dato contenuto in \lstinline{MDR}
 all'indirizzo contenuto in \lstinline{MAR}.
+
+\subsection{Implementazione VHDL dell'Unità Operativa}
+
+L'implementazione dell'unità operativa richiede sostanzialmente di codificare in
+VHDL tre componenti:
+\begin{itemize}
+  \item i registri;
+  \item i bus;
+  \item l'ALU
+\end{itemize}
+
+\subsubsection{Implementazione dei Registri}
+
+I registri dell'unità operativa sono implementati mediante un singolo process
+\lstinline{reg_proc}, che ne gestisce la logica di reset e di scrittura mediante
+il bus \lstinline{C}:
+
+\begin{myvhdl}{datapath.vhd}
+  architecture behavioral of datapath is
+
+  -- Registers
+  signal sp_reg   : reg_data_type;
+  signal lv_reg   : reg_data_type;
+  signal cpp_reg  : reg_data_type;
+
+  [...]
+
+  -- Processor registers
+  reg_proc : process(clk) is
+  begin
+    if rising_edge(clk) then
+      if reset = '1' then
+        sp_reg  <= x"00000101";
+        lv_reg  <= x"00000100";
+        cpp_reg <= x"00000080";
+
+        [...]
+
+      else
+        if c_to_reg_control(c_ctrl_mar) = '1' then
+          mar_reg <= c_bus;
+        end if;
+        if c_to_reg_control(c_ctrl_pc) = '1' then
+          pc_reg <= c_bus;
+        end if;
+        if c_to_reg_control(c_ctrl_sp) = '1' then
+          sp_reg <= c_bus;
+        end if;
+
+        [...]
+
+      end if;
+    end if;
+  end process reg_proc;
+\end{myvhdl}
+
+Il tipo \lstinline{reg_data_type} è introdotto come abbreviazione per un
+\lstinline{std_logic_vector} di 32 bit (\lstinline{31}:\lstinline{0}); è
+definito, insieme ad altri tipi utili per l'implementazione del processore, nel
+file \lstinline{common_defs.vhd}:
+
+\begin{myvhdl}{common\_defs.vhd}
+package common_defs is
+  -- Data widths
+  --! Processor register data width
+  constant reg_data_width      : positive := 32;
+
+  [...]
+
+  -- Subtypes
+  --! Processor register data
+  subtype reg_data_type is std_logic_vector(reg_data_width - 1 downto 0);
+
+  [...]
+
+end package common_defs;
+\end{myvhdl}
+
+
+\subsubsection{Implementazione dei Bus}
+
+\subsubsection{Implementazione dell'ALU}
+
+In VHDL, l'\textit{entity declaration} per l'ALU così descritta può essere
+scritta come:
+
+\begin{myvhdl}{alu.vhd}
+entity alu is
+  port (
+    --! ALU control
+    control       : in  alu_ctrl_type;
+    --! ALU operand A
+    operand_a     : in  reg_data_type;
+    --! ALU operand B
+    operand_b     : in  reg_data_type;
+    --! ALU result
+    sh_result     : out reg_data_type;
+    --! Negative flag
+    negative_flag : out std_logic;
+    --! Zero flag
+    zero_flag     : out std_logic
+    );
+end entity alu;
+\end{myvhdl}
 
 \section{Le Microistruzioni}
 

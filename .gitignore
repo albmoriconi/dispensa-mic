@@ -7,4 +7,7 @@ _minted-main/
 *.pdf
 *.log
 *.out
+*.nav
+*.snm
+*.toc
 
