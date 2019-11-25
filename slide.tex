@@ -1,5 +1,5 @@
 \documentclass{beamer}
-\usetheme{Antibes}
+\usetheme{Madrid}
 
 \usepackage[italian]{babel}
 
@@ -13,11 +13,35 @@
 \usepackage{geometry}
 \geometry{mag=2500,truedimen}
 
+\usepackage{tcolorbox}
+\tcbuselibrary{minted,breakable}
+\newtcblisting{myvhdl}[1]{%
+  listing only,
+  minted language=vhdl,
+  minted options={breaklines,fontsize=\tiny},
+  fonttitle=\tiny \bfseries,
+  breakable,
+  boxsep=0.5mm,
+  left=0.5mm,
+  right=0.5mm,
+  top=0.5mm,
+  bottom=0.5mm,
+  title=#1
+}
+
+\usepackage{courier}
+
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily,
+  breaklines=true
+}
+
 \title{Il Processore Mic-1}
 \subtitle{Implementazione}
-\author{Prof.\ Nicola Mazzocca\\
+\author[Architettura dei Sistemi di Elaborazione]{Prof.\ Nicola Mazzocca\\
   Ing. Alberto Moriconi}
-\institute{Corso di Architettura dei Sistemi di Elaborazione\\
+\institute[]{Corso di Architettura dei Sistemi di Elaborazione\\
   Università degli Studi di Napoli Federico II}
 \date{}
 
@@ -25,27 +49,385 @@
 \begin{frame}
 \titlepage{}
 \end{frame}
+\section{Unità Operativa}
+\begin{frame}[fragile]
+  \frametitle{Unità Operativa}
+  \begin{columns}
+    \begin{column}{0.4\textwidth}
+      \begin{center}
+        \includegraphics[width=\textwidth]{datapath.png}
+      \end{center}
+    \end{column}
+    \begin{column}{0.6\textwidth}
+      \begin{myvhdl}{datapath.vhd}
+entity datapath is
+  port (
+    clk              : in  std_logic;
+    reset            : in  std_logic;
+    alu_control      : in  alu_ctrl_type;
+    c_to_reg_control : in  c_ctrl_type;
+    mem_control      : in  mem_ctrl_type;
+    reg_to_b_control : in  b_ctrl_type;
+    mbr_reg_out      : out mbr_data_type;
+    alu_n_flag       : out std_logic;
+    alu_z_flag       : out std_logic;
+    mem_data_we      : out std_logic;
+    mem_data_in      : in  reg_data_type;
+    mem_data_out     : out reg_data_type;
+    mem_data_addr    : out reg_data_type;
+    mem_instr_in     : in  mbr_data_type;
+    mem_instr_addr   : out reg_data_type
+    );
+end entity datapath;
+
+architecture behavioral of datapath is
+  -- Come la implementiamo?
+end architecture behavioral;
+\end{myvhdl}
+    \end{column}
+  \end{columns}
+\end{frame}
 
 \section{Unità Operativa}
-\begin{frame}
+\begin{frame}[fragile]
   \frametitle{Componenti}
+  \begin{columns}
+    \begin{column}{0.4\textwidth}
+      \begin{center}
+        \includegraphics[width=\textwidth]{datapath.png}
+      \end{center}
+    \end{column}
+    \begin{column}{0.6\textwidth}
+      Per implementare l'unità operativa dobbiamo scrivere in VHDL il codice
+      relativo:
+      \begin{itemize}
+        \item ai registri;
+        \item all'ALU;
+        \item ai bus.
+      \end{itemize}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}
-  \frametitle{Registri}
+\begin{frame}[fragile]
+  \frametitle{Registri} I registri sono implementati con un singolo
+  \lstinline{process}, che ne gestisce la logica di reset e quella di scrittura
+  mediante il bus \lstinline{C}:
+
+  \begin{columns}
+    \begin{column}{0.45\textwidth}
+      \begin{myvhdl}{datapath.vhd}
+-- Registers
+signal sp_reg  : reg_data_type;
+signal lv_reg  : reg_data_type;
+signal cpp_reg : reg_data_type;
+[...]
+\end{myvhdl}
+
+\begin{myvhdl}{common\_defs.vhd}
+--! Processor register data width
+constant reg_data_width : positive := 32;
+[...]
+--! Processor register data
+subtype reg_data_type is
+  std_logic_vector(reg_data_width - 1 downto 0);
+[...]
+--! C control MAR bit
+constant c_ctrl_mar : natural := 0;
+--! C control MDR bit
+constant c_ctrl_mdr : natural := 1;
+[...]
+\end{myvhdl}
+\end{column}
+
+\begin{column}{0.55\textwidth}
+  \begin{myvhdl}{datapath.vhd}
+-- Processor registers
+reg_proc : process(clk) is
+begin
+  if rising_edge(clk) then
+    if reset = '1' then
+      mar_reg <= (others => '0');
+      pc_reg  <= (others => '0');
+      [...]
+    else
+      if c_to_reg_control(c_ctrl_mar) = '1' then
+        mar_reg <= c_bus;
+      end if;
+      if c_to_reg_control(c_ctrl_pc) = '1' then
+        pc_reg <= c_bus;
+      end if;
+      [...]
+    end if;
+  end if;
+end process reg_proc;
+\end{myvhdl}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}
-  \frametitle{Bus}
-\end{frame}
-
-\begin{frame}
+\begin{frame}[fragile]
   \frametitle{ALU}
+  L'implementazione dell'ALU è puramente behavioral:
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+  \begin{myvhdl}{alu.vhd}
+entity alu is
+  port (
+    --! ALU control
+    control       : in  alu_ctrl_type;
+    --! ALU operand A
+    operand_a     : in  reg_data_type;
+    --! ALU operand B
+    operand_b     : in  reg_data_type;
+    --! ALU result
+    sh_result     : out reg_data_type;
+    --! Negative flag
+    negative_flag : out std_logic;
+    --! Zero flag
+    zero_flag     : out std_logic
+    );
+end entity alu;
+
+architecture behavioral of alu is
+  [...]
+end architecture behavioral;
+\end{myvhdl}
+\end{column}
+\begin{column}{0.5\textwidth}
+\begin{myvhdl}{datapath.vhd}
+-- ALU instantiation
+alu : entity work.alu
+  port map (
+    control       => alu_control,
+    operand_a     => a_bus,
+    operand_b     => b_bus,
+    sh_result     => c_bus,
+    negative_flag => alu_n_flag,
+    zero_flag     => alu_z_flag);
+\end{myvhdl}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Bus}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      A ciascun bus corrisponde un \lstinline{signal} VHDL:
+\begin{myvhdl}{datapath.vhd}
+signal a_bus : reg_data_type;
+signal b_bus : reg_data_type;
+signal c_bus : reg_data_type;
+\end{myvhdl}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      Il multiplexer che disciplina l'accesso al bus \lstinline{B} è
+      implementato utilizzando il costrutto \lstinline{with}:
+      \begin{myvhdl}{datapath.vhd}
+with reg_to_b_control select b_bus <=
+  mdr_reg         when b_ctrl_mdr,
+  pc_reg          when b_ctrl_pc,
+  mbr_s           when b_ctrl_mbr,
+  mbr_u           when b_ctrl_mbru,
+  sp_reg          when b_ctrl_sp,
+  lv_reg          when b_ctrl_lv,
+  cpp_reg         when b_ctrl_cpp,
+  tos_reg         when b_ctrl_tos,
+  opc_reg         when b_ctrl_opc,
+  (others => '0') when others;
+\end{myvhdl}
+\end{column}
+\end{columns}
+
+\begin{block}{Logica tri-state}
+  In altri corsi è presentato anche un altro modo di disciplinare l'accesso ai
+  bus: facendo uso di buffer tri-state. Gli FPGA che utilizziamo non dispongono
+  però di buffer tri-state se non ai pad di IO.
+\end{block}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Ricapitolando}
+  \begin{columns}
+    \begin{column}{0.4\textwidth}
+      \begin{center}
+        \includegraphics[width=\textwidth]{datapath.png}
+      \end{center}
+    \end{column}
+    \begin{column}{0.6\textwidth}
+  Abbiamo implementato:
+  \begin{itemize}
+    \item i registri con un \lstinline{process};
+    \item l'ALU con un \lstinline{component} behavioral;
+    \item la disciplina di accesso al bus \lstinline{B} con un costrutto
+    \lstinline{with}.
+  \end{itemize}
+  Queste parti evolvono \textbf{concorrentemente}.
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Protocollo con la Memoria}
+  \begin{center}
+    \includegraphics[width=0.5\textwidth]{mem_prot.png}
+  \end{center}
+  \begin{itemize}
+    \item Per eseguire una scrittura, l'indirizzo e il dato devono essere
+    disponibili nei registri \lstinline{MAR} e \lstinline{MDR} al fronte di
+    salita in cui è alto il segnale \lstinline{WE}.
+    \item Quando si opera in lettura (\lstinline{WE} basso), il dato è
+    disponibile nel registro \lstinline{MDR} al fronte di clock successivo
+    rispetto a quello in cui l'indirizzo è posto nel registro \lstinline{MAR}.
+  \end{itemize}
+\end{frame}
+
+\section{Microistruzioni}
+\begin{frame}
+  \frametitle{Segnali di Controllo}
+  Per controllare l'unità operativa sono necessari:
+  \begin{itemize}
+    \item 9 segnali per controllare la scrittura dei dati dal bus \lstinline{C}
+    ai registri;
+    \item 4 segnali per controllare quale registro è collegato al bus
+    \lstinline{B} e va in ingresso all'ALU;
+    \item 8 segnali per controllare l'ALU;
+    \item 2 segnali per abilitare lettura/scrittura sull'interfaccia
+    \lstinline{MAR}/\lstinline{MDR};
+    \item 1 segnale per abilitare il fetch sull'interfaccia
+    \lstinline{PC}/\lstinline{MBR}.
+  \end{itemize}
+  Inoltre ogni microistruzione deve contenere dei bit aggiuntivi per indicare la
+  microistruzione successiva e per il controllo di flusso.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Formato delle Microistruzioni}
+  \begin{center}
+    \includegraphics[width=\textwidth]{mu_instr_small.png}
+  \end{center}
+\begin{itemize}
+  \item \lstinline{Addr} - Indirizzo di una potenziale prossima microistruzione;
+  \item \lstinline{JAM} - Determina come è selezionata la prossima
+  microistruzione;
+  \item \lstinline{ALU} - Controllo dell'ALU e dello shifter;
+  \item \lstinline{C} - Controlla quali registri vengono scritti dal bus
+  \lstinline{C};
+  \item \lstinline{Mem} - Controlla le operazioni di memoria;
+  \item \lstinline{B} - Seleziona il registro connesso al bus \lstinline{B}.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Esempio: l'istruzione \lstinline{IADD}}
+  Trascurando per ora i campi \lstinline{Addr} e \lstinline{JAM}, siamo in grado
+di codificare gli altri campi delle microistruzioni:
+\begin{enumerate}
+  \item
+  \begin{itemize}
+    \item \lstinline{ALU}: \lstinline{110110} (decremento dell'operando \lstinline{B});
+    \item \lstinline{C}: \lstinline{000001001} (bus \lstinline{C} scrive su
+    \lstinline{SP} e \lstinline{MAR});
+    \item \lstinline{Mem}: \lstinline{010} (lettura dati);
+    \item \lstinline{B}: \lstinline{0100} (\lstinline{SP} controlla il bus \lstinline{B}).
+  \end{itemize}
+  \item
+  \begin{itemize}
+    \item \lstinline{ALU}: \lstinline{010100} (l'operando \lstinline{B} passa invariato);
+    \item \lstinline{C}: \lstinline{100000000} (bus \lstinline{C} scrive su
+    \lstinline{H});
+    \item \lstinline{Mem}: \lstinline{000} (nessuna operazione di memoria);
+    \item \lstinline{B}: \lstinline{0111} (\lstinline{TOS} controlla il bus \lstinline{B}).
+  \end{itemize}
+  \item
+  \begin{itemize}
+    \item \lstinline{ALU}: \lstinline{111100} (somma degli operandi
+    \lstinline{A} e \lstinline{B});
+    \item \lstinline{C}: \lstinline{001000010} (bus \lstinline{C} scrive su
+    \lstinline{MDR} e \lstinline{TOS});
+    \item \lstinline{Mem}: \lstinline{100} (scrittura dati);
+    \item \lstinline{B}: \lstinline{0000} (\lstinline{MDR} controlla il bus \lstinline{B}).
+  \end{itemize}
+\end{enumerate}
 \end{frame}
 
 \section{Unità di Controllo}
-\begin{frame}
-  \frametitle{Titolo}
+\begin{frame}[fragile]
+  \frametitle{Control Store}
+  Le microistruzioni sono memorizzate in una ROM interna all'unità di controllo,
+  denominata \textit{control store}:
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+\begin{myvhdl}{control\_store.vhd}
+entity control_store is
+  port (
+    --! Address of the desired word
+    address : in  ctrl_str_addr_type;
+    --! Content of the addressed word
+    word    : out ctrl_str_word_type
+    );
+end entity control_store;
+\end{myvhdl}
+\end{column}
+\begin{column}{0.5\textwidth}
+\begin{myvhdl}{control\_store.vhd}
+constant words : ctrl_str_type := (
+--BEGIN_WORDS_ENTRY
+0 => "000000110000000000000000000000001001",
+1 => "010111100000000000000000000000001001",
+2 => "000000000000000000000000000000000000",
+[...]
+--END_WORDS_ENTRY
+);
+\end{myvhdl}
+\end{column}
+\end{columns}
+\begin{myvhdl}{common\_defs.vhd}
+--! Control store address
+subtype ctrl_str_addr_type is std_logic_vector(ctrl_str_addr_width - 1 downto 0);
+--! Control store word
+subtype ctrl_str_word_type is std_logic_vector(ctrl_str_word_width - 1 downto 0);
+[...]
+--! Control store word
+subtype ctrl_str_word_type is std_logic_vector(ctrl_str_word_width - 1 downto 0);
+[...]
+--! Control store content
+type ctrl_str_type is array (ctrl_str_words - 1 downto 0) of ctrl_str_word_type;
+\end{myvhdl}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Sequencing delle Microistruzioni}
+  L'unità di controllo si comporta effettivamente come un \textit{sequencer}.
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+\begin{myvhdl}{ajvm.mal}
+main:
+    PC = PC + 1; fetch; goto (MBR)
+\end{myvhdl}
+\end{column}
+\begin{column}{0.5\textwidth}
+\begin{myvhdl}{ajvm.mal}
+iadd = 0x65:
+    MAR = SP = SP - 1; rd
+    H = TOS
+    MDR = TOS = MDR + H; wr; goto main
+\end{myvhdl}
+\end{column}
+\end{columns}
+\begin{enumerate}
+  \item Dopo una fase di inizializazione, viene eseguita la microistruzione
+  \lstinline{main} che incrementa il \lstinline{PC}, esegue il fetch di una
+  microistruzione e imposta come prossima microistruzione quella ``puntata'' dal
+  registro \lstinline{MBR}.
+  \item Se ad esempio l'istruzione prelevata su \lstinline{MBR} è
+  \lstinline{0x65}, viene eseguita la microistruzione all'indirizzo
+  \lstinline{0x65} del control store, la \lstinline{IADD}.
+  \item Dopo le tre microistruzioni della \lstinline{IADD} viene rieseguita la
+  microistruzione alla label \lstinline{main}, che esegue il fetch della
+  prossima istruzione.
+\end{enumerate}
 \end{frame}
 
 \section{Tracce}

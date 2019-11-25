@@ -1,6 +1,6 @@
 .DS_Store
 .auctex-auto/
-_minted-main/
+_minted-*/
 *.aux
 *.listing
 *.docx
@@ -10,4 +10,5 @@ _minted-main/
 *.nav
 *.snm
 *.toc
+*.vrb
 

@@ -395,8 +395,8 @@ constant c_ctrl_sp         : natural := 3;
 
 \subsubsection{Implementazione dell'ALU}
 
-In VHDL, l'entity declaration per l'ALU che abbiamo descritto può essere scritta
-come:
+In VHDL, l'\lstlisting{entity} declaration per l'ALU che abbiamo descritto può
+essere scritta come:
 
 \begin{myvhdl}{alu.vhd}
 entity alu is
@@ -477,6 +477,7 @@ Per controllare l'unità operativa del processore, presentata in fig.
     ai registri;
     \item 9 segnali per controllare quale registro è collegato al bus
     \lstinline{B} e va in ingresso all'ALU;
+    \item 8 segnali per controllare l'ALU;
     \item 2 segnali per abilitare lettura/scrittura sull'interfaccia
     \lstinline{MAR}/\lstinline{MDR};
     \item 1 segnale per abilitare il fetch sull'interfaccia
