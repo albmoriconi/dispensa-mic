@@ -395,7 +395,7 @@ constant c_ctrl_sp         : natural := 3;
 
 \subsubsection{Implementazione dell'ALU}
 
-In VHDL, l'\lstlisting{entity} declaration per l'ALU che abbiamo descritto può
+In VHDL, l'\lstinline{entity} declaration per l'ALU che abbiamo descritto può
 essere scritta come:
 
 \begin{myvhdl}{alu.vhd}
@@ -857,7 +857,9 @@ begin
 end process reg_to_b_decoder;
 \end{myvhdl}
 
-\chapter{Installazione}
+\chapter{La Toolchain Mic-1}
+
+\section{Installazione}
 
 Per installare il microassemblatore \lstinline{mal} e l'assemblatore
 \lstinline{ajvm} è anzitutto necessario installare il version control system Git
@@ -867,32 +869,32 @@ usato, ma in una tipica distribuzione Linux Debian-based (come Ubuntu) è
 sufficiente eseguire:
 
 \begin{commandshell}
-  sudo apt install git gradle cmake
+sudo apt install git gradle cmake
 \end{commandshell}
 
 Conviene dunque creare una nuova cartella per i repository da scaricare, e
 posizionarvici; al suo interno, creeremo anche una directory per i tool compilati:
 
 \begin{commandshell}
-  mkdir esercitazione_mic
-  cd esercitazione_mic
-  mkdir tools
+mkdir esercitazione_mic
+cd esercitazione_mic
+mkdir tools
 \end{commandshell}
 
 È possibile a questo punto compilare i tool (ignorando eventuali warning in fase
 di test):
 
 \begin{commandshell}
-  git clone https://github.com/albmoriconi/mal.git
-  cd mal
-  ./gradlew build
-  cd ..
-  git clone https://github.com/albmoriconi/ajvm.git
-  cd ajvm
-  ./gradlew build
-  cd ..
-  tar -xvf mal/build/distributions/mal.tar -C tools/
-  tar -xvf ajvm/build/distributions/ajvm.tar -C tools/
+git clone https://github.com/albmoriconi/mal.git
+cd mal
+./gradlew build
+cd ..
+git clone https://github.com/albmoriconi/ajvm.git
+cd ajvm
+./gradlew build
+cd ..
+tar -xvf mal/build/distributions/mal.tar -C tools/
+tar -xvf ajvm/build/distributions/ajvm.tar -C tools/
 \end{commandshell}
 
 Per poter usare i tool nella shell attiva, le loro directory vanno aggiunte al
@@ -916,6 +918,41 @@ del processore, e predisporne la directory per la build:
   cmake ..
 \end{commandshell}
 
+\section{Struttura del Progetto}
+
+Da qui in avanti, ogni volta che faremo riferimento a un percorso sarà rispetto
+alla directory in cui è stato scaricato il repository \lstinline{amic-0}.
+
+La directory principale del repository è organizzata come segue:
+\begin{itemize}
+  \item \lstinline{src} - codice sorgente
+  \begin{itemize}
+    \item \lstinline{main} - implementazione (subdirectory ordinate per
+    linguaggio)
+    \item \lstinline{test} - testbench (subdirectory ordinate per linguaggio)
+  \end{itemize}
+  \item \lstinline{util} - utility necessarie per il flow di sviluppo
+  (subdirectory ordinate per linguaggio)
+  \item \lstinline{build} - contiene i file prodotti dal build system (questa
+  directory deve essere creata manualmente)
+\end{itemize}
+
+Per il momento non ci interessano le altre directory e file presenti; è
+importante tuttavia notare che ogni directory che contiene codice (eventualmente
+nelle subdirectory) contiene anche un file \lstinline{CMakeLists.txt} che serve
+al build system per tenere traccia dei sorgenti e aggiungerli ai target
+opportuni.
+
+\section{Flow di Sviluppo}
+
+Per utilizzare il flow di sviluppo da linea di comando è necessario installare
+due tool aggiuntivi: il simulatore \lstinline{ghdl} e il visualizzatore di forme
+d'onda \lstinline{gtkwave}:
+
+\begin{commandshell}
+  sudo apt install ghdl gtkwave
+\end{commandshell}
+
 Dalla directory build è ora possibile lanciare il tool \lstinline{make} con una
 serie di target utili per lanciare microassemblatore, assemblatore e alcuni
 test.
@@ -929,6 +966,35 @@ store e RAM lanciando, dalla directory \lstinline{build}, i target:
   make create_control_store
   make create_ram
 \end{commandshell}
+
+Il target \lstinline{check} lancia invece i testbench contenuti nella directory
+\lstinline{src/test/vhdl}:
+\begin{commandshell}
+  make check
+\end{commandshell}
+
+Un esempio dei risultati della batterie di test è riportato in
+fig.~\ref{fig:test}. L'esecuzione dei test produce anche le waveform relative
+alle esecuzioni dei testbench, come quella riportata in fig.~\ref{fig:waveform},
+che possono essere trovate nella directory \lstinline{build/src/test/vhdl} e
+visualizzate utilizzando il tool \lstinline{gtkwave}.
+
+Per aggiungere altri testbench alla batterie è sufficiente salvarli nella
+directory \lstinline{test/vhdl} e modificare il file
+\lstinline{test/vhdl/CmakeLists.txt} aggiungendo alla macro
+\lstinline{add_vhdl_test_sources} un'entry relativa al nuovo testbench.
+
+\begin{figure}
+  \centering
+  \includegraphics[width=0.8\textwidth]{test.png}
+  \caption{Risultati dei testbench}\label{fig:test}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=0.8\textwidth]{waveform.png}
+  \caption{Waveform del testbench \lstinline{processor_tb.vhd}}\label{fig:waveform}
+\end{figure}
 
 \begin{thebibliography}{2}
   \bibitem{tanenbaum}

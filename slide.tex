@@ -28,6 +28,21 @@
   bottom=0.5mm,
   title=#1
 }
+\newcommand{\BashFancyFormatLine}{%
+  \def\FancyVerbFormatLine##1{\$\,##1}%
+}
+\newtcblisting{commandshell}{%
+  colback=black,
+  colupper=white,
+  breakable,
+  colframe=yellow!75!black,
+  listing only,
+  boxsep=0.5mm,
+  left=0.5mm,
+  right=0.5mm,
+  top=0.5mm,
+  bottom=0.5mm,
+  minted options={fontsize=\tiny,breaklines,formatcom=\BashFancyFormatLine}}
 
 \usepackage{courier}
 
@@ -430,8 +445,113 @@ iadd = 0x65:
 \end{enumerate}
 \end{frame}
 
+\section{Toolchain}
+\begin{frame}[fragile]
+  \frametitle{Installazione dei Tool}
+  In caso di dubbi, fare riferimento alle dispense per la procedura dettagliata.
+\begin{commandshell}
+sudo apt install git gradle cmake ghdl gtkwave
+mkdir esercitazione_mic
+cd esercitazione_mic
+mkdir tools
+git clone https://github.com/albmoriconi/mal.git
+cd mal
+./gradlew build
+cd ..
+git clone https://github.com/albmoriconi/ajvm.git
+cd ajvm
+./gradlew build
+cd ..
+tar -xvf mal/build/distributions/mal.tar -C tools/
+tar -xvf ajvm/build/distributions/ajvm.tar -C tools/
+git clone https://github.com/albmoriconi/amic-0.git
+cd amic-0
+mkdir build
+cd build
+cmake ..
+\end{commandshell}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Struttura del Progetto}
+  La directory principale del repository amic-0 è organizzata come segue:
+\begin{itemize}
+  \item \lstinline{src} - codice sorgente
+  \begin{itemize}
+    \item \lstinline{main} - implementazione (subdirectory ordinate per
+    linguaggio)
+    \item \lstinline{test} - testbench (subdirectory ordinate per linguaggio)
+  \end{itemize}
+  \item \lstinline{util} - utility necessarie per il flow di sviluppo
+  (subdirectory ordinate per linguaggio)
+  \item \lstinline{build} - contiene i file prodotti dal build system (questa
+  directory deve essere creata manualmente)
+\end{itemize}
+
+Ogni directory che contiene codice (eventualmente nelle subdirectory) contiene
+anche un file \lstinline{CMakeLists.txt} che serve al build system per tenere
+traccia dei sorgenti e aggiungerli ai target opportuni.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Flow di Sviluppo}
+  \begin{enumerate}
+    \item Per modificare microprogramma e programma bisogna modificarne i file e
+    lanciare i target make relativi.
+  \begin{itemize}
+    \item \lstinline{src/main/mal/ajvm.mal} - microprogramma
+    \begin{itemize}
+      \item \lstinline{make create_control_store}
+    \end{itemize}
+    \item \lstinline{src/main/ajvm/program.ajvm} - programma
+    \begin{itemize}
+      \item \lstinline{make create_ram}
+    \end{itemize}
+  \end{itemize}
+  \item Per lanciare la batteria di test va lanciato il target \lstinline{make
+    check}
+  \item Le forme d'onda (visualizzabili con \lstinline{gtkwave}) sono salvate
+  nella directory \lstinline{build/src/test/vhdl}.
+\end{enumerate}
+Per aggiungere altri testbench alla batteria:
+\begin{enumerate}
+  \item salvarli nella directory \lstinline{test/vhdl};
+  \item modificare il file \lstinline{test/vhdl/CmakeLists.txt} aggiungendo alla
+  macro \lstinline{add_vhdl_test_sources} un'entry relativa al nuovo testbench.
+\end{enumerate}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Risultati dei Test (Esempio)}
+  \begin{center}
+    \includegraphics[width=0.9\textwidth]{test.png}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Waveform dei Testbench (Esempio)}
+  \begin{center}
+    \includegraphics[width=\textwidth]{waveform.png}
+  \end{center}
+\end{frame}
+
 \section{Tracce}
 \begin{frame}
-  \frametitle{Titolo}
+  \frametitle{Tracce degli Esercizi}
+  \begin{enumerate}
+    \item Simulare l'esecuzione di un programma contenente due istruzioni IJVM.
+    \begin{itemize}
+      \item È necessario modificare il programma (\lstinline{program.ajvm}) e
+      ricreare il control store.
+      \item Dunque, si può aggiungere un nuovo testbench alla batteria o
+      modificare quello già esistente (\lstinline{processor_tb.vhd}).
+    \end{itemize}
+    \item Eseguire l'override di una istruzione.
+    \begin{itemize}
+      \item È necessario modificare il microprogramma (\lstinline{ajvm.mal}).
+      \item Che succede modificando la \lstinline{IADD}? Come possiamo farle
+      eseguire una sottrazione?
+    \end{itemize}
+  \end{enumerate}
 \end{frame}
 \end{document}
