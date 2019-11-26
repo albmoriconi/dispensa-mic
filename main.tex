@@ -1103,13 +1103,13 @@ Il target \lstinline{check} lancia invece i testbench contenuti nella directory
   make check
 \end{commandshell}
 
-Un esempio dei risultati della batterie di test è riportato in
+Un esempio dei risultati della suite di test è riportato in
 fig.~\ref{fig:test}. L'esecuzione dei test produce anche le waveform relative
 alle esecuzioni dei testbench, come quella riportata in fig.~\ref{fig:waveform},
 che possono essere trovate nella directory \lstinline{build/src/test/vhdl} e
 visualizzate utilizzando il tool \lstinline{gtkwave}.
 
-Per aggiungere altri testbench alla batterie è sufficiente salvarli nella
+Per aggiungere altri testbench alla suite è sufficiente salvarli nella
 directory \lstinline{test/vhdl} e modificare il file
 \lstinline{test/vhdl/CmakeLists.txt} aggiungendo alla macro
 \lstinline{add_vhdl_test_sources} un'entry relativa al nuovo testbench.

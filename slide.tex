@@ -274,9 +274,9 @@ with reg_to_b_control select b_bus <=
   Abbiamo implementato:
   \begin{itemize}
     \item i registri con un \lstinline{process};
-    \item l'ALU con un \lstinline{component} behavioral;
+    \item l'ALU con un \lstinline{component} con architettura behavioral;
     \item la disciplina di accesso al bus \lstinline{B} con un costrutto
-    \lstinline{with}.
+    \lstinline{with/select}.
   \end{itemize}
   Queste parti evolvono \textbf{concorrentemente}.
 \end{column}
@@ -433,8 +433,8 @@ iadd = 0x65:
 \end{columns}
 \begin{enumerate}
   \item Dopo una fase di inizializazione, viene eseguita la microistruzione
-  \lstinline{main} che incrementa il \lstinline{PC}, esegue il fetch di una
-  microistruzione e imposta come prossima microistruzione quella ``puntata'' dal
+  \lstinline{main} che incrementa il \lstinline{PC}, esegue il fetch di
+  un'istruzione e imposta come prossima microistruzione quella ``puntata'' dal
   registro \lstinline{MBR}.
   \item Se ad esempio l'istruzione prelevata su \lstinline{MBR} è
   \lstinline{0x65}, viene eseguita la microistruzione all'indirizzo
@@ -508,12 +508,12 @@ traccia dei sorgenti e aggiungerli ai target opportuni.
       \item \lstinline{make create_ram}
     \end{itemize}
   \end{itemize}
-  \item Per lanciare la batteria di test va lanciato il target \lstinline{make
+  \item Per lanciare la suite di test va lanciato il target \lstinline{make
     check}
   \item Le forme d'onda (visualizzabili con \lstinline{gtkwave}) sono salvate
   nella directory \lstinline{build/src/test/vhdl}.
 \end{enumerate}
-Per aggiungere altri testbench alla batteria:
+Per aggiungere altri testbench alla suite:
 \begin{enumerate}
   \item salvarli nella directory \lstinline{test/vhdl};
   \item modificare il file \lstinline{test/vhdl/CmakeLists.txt} aggiungendo alla
@@ -542,13 +542,14 @@ Per aggiungere altri testbench alla batteria:
     \item Simulare l'esecuzione di un programma contenente due istruzioni IJVM.
     \begin{itemize}
       \item È necessario modificare il programma (\lstinline{program.ajvm}) e
-      ricreare il control store.
+      ricreare la RAM.
       \item Dunque, si può aggiungere un nuovo testbench alla batteria o
       modificare quello già esistente (\lstinline{processor_tb.vhd}).
     \end{itemize}
-    \item Eseguire l'override di una istruzione.
+    \item Modificare l'operazione eseguita da una istruzione IJVM.
     \begin{itemize}
-      \item È necessario modificare il microprogramma (\lstinline{ajvm.mal}).
+      \item È necessario modificare il microprogramma (\lstinline{ajvm.mal}) e
+      ricreare il control store.
       \item Che succede modificando la \lstinline{IADD}? Come possiamo farle
       eseguire una sottrazione?
     \end{itemize}
