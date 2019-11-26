@@ -71,7 +71,7 @@ per due scopi principali:
   nel corso, sia possibile realizzare una microarchitettura che implementi un
   semplice set di istruzioni;
   \item mostrare come anche la realizzazione di un sistema apparentemente
-  complesso come un processore si riduca in realtà alla progettazione di
+  complesso, come un processore, si riduca in realtà alla progettazione di
   un'unità operativa e di un'unità di controllo, e del modo in cui devono
   comunicare.
 \end{enumerate}
@@ -116,7 +116,7 @@ inizializzata; dunque:
   locazione di memoria \lstinline{a3} e ne esegue il push su stack;
   \item l'istruzione \lstinline{IADD} esegue il pop dei due elementi in cima
   allo stack e il push della loro somma;
-  \item l'istruzione \lstinline{ISTORE} esegue il pop della somma e lo scrive in
+  \item l'istruzione \lstinline{ISTORE} esegue il pop della somma e la scrive in
   memoria alla locazione \lstinline{a1}.
 \end{enumerate}
 \renewcommand{\labelenumi}{\arabic{enumi}.}
@@ -139,20 +139,25 @@ Supponiamo che il processore si trovi al passo (c) e debba eseguire l'istruzione
 \end{enumerate}
 
 Per fare questo è necessario controllare gli accessi in memoria, l'ALU, ed
-eseguire delle operazioni di mantenimento (e.g.~aggiornare il puntatore alla
-testa dello stack, che è modificato dalle operazioni di push e pop).
+eseguire delle operazioni di \textit{book-keeping} (e.g.~aggiornare il puntatore
+alla testa dello stack, che è modificato dalle operazioni di push e pop).
 
 L'implementazione del processore Mic-1 che presentiamo è detta in \textit{logica
   microprogrammata}: ciascuna istruzione IJVM è implementata come una sequenza
-di \textit{microistruzioni}, che complessivamente compongono il
-\textit{microprogramma}, memorizzato in una ROM interna al processore. Per
-capire come è strutturata una microistruzione e come è possibile realizzare un
-microprograma che implementi un set di istruzioni, è necessario introdurre
+di \textit{microistruzioni} (detta talvolta \textit{microprocedura}); tali
+sequenze compongono il \textit{microprogramma}.
+
+\begin{mynote}{}{}
+  Il microprogramma è tipicamente memorizzato in una ROM interna al processore.
+\end{mynote}
+
+Per capire come è strutturata una microistruzione e come è possibile realizzare
+un microprograma che implementi un set di istruzioni, è necessario introdurre
 anzitutto l'unità operativa del processore.
 
 \section{L'Unità Operativa}
 L'unità operativa del processore che intendiamo progettare comprende l'ALU, i
-suoi ingressi e le sue uscite (tra cui i registri che si interfacciano con la
+suoi ingressi, e le sue uscite (tra cui i registri che si interfacciano con la
 memoria), ed è mostrata in fig.~\ref{fig:datapath}.
 
 \begin{figure}
@@ -281,12 +286,7 @@ all'indirizzo contenuto in \lstinline{MAR}.
     \lstinline{MAR}/\lstinline{MDR}}\label{fig:mem_prot}
 \end{figure}
 
-Il protocollo per l'interfaccia a 32 bit è mostrato in fig.~\ref{fig:mem_prot};
-per eseguire una scrittura, l'indirizzo e il dato devono essere disponibili nei
-registri \lstinline{MAR} e \lstinline{MDR} al fronte di salita in cui è alto il
-segnale \lstinline{WE}; quando si opera in lettura (\lstinline{WE} basso), il
-dato è disponibile nel registro \lstinline{MDR} al fronte di clock successivo
-rispetto a quello in cui l'indirizzo è posto nel registro \lstinline{MAR}.
+Il protocollo per l'interfaccia a 32 bit è mostrato in fig.~\ref{fig:mem_prot}.
 
 \subsection{Implementazione VHDL dell'Unità Operativa}
 
@@ -452,7 +452,8 @@ alu : entity work.alu
 Come abbiamo visto nella sezione relativa ai registri, il bus \lstinline{C} è
 connesso a tutti i registri e un segnale di abilitazione per ciascuno di essi
 funge da abilitazione in scrittura. Infine, il bus \lstinline{B} è implementato
-mediante un multiplexer, implementato usando il costrutto VHDL \lstinline{with}:
+mediante un multiplexer, implementato usando il costrutto VHDL
+\lstinline{with/select} (\textit{selected assignment}):
 
 \begin{myvhdl}{datapath.vhd}
 with reg_to_b_control select b_bus <=
@@ -484,12 +485,6 @@ Per controllare l'unità operativa del processore, presentata in fig.
     \lstinline{PC}/\lstinline{MBR}.
 \end{itemize}
 
-\begin{mynote}{}{}
-  Nella nostra implementazione su FPGA, i segnali di lettura per la memoria sono
-  inutili in quanto i device effettivamente utilizzati non li richiedono. Sono
-  stati mantenuti per compatibilità con il formato usato in~\cite{tanenbaum}.
-\end{mynote}
-
 Poiché al più un registro alla volta può essere collegato al registro
 \lstinline{B}, non c'è bisogno di utilizzare effettivamente 9 segnali: dato che
 al più uno di essi può essere asserito, le 10 configurazioni possibili possono
@@ -497,7 +492,7 @@ essere codificate su $\ceil{\log_{2}10} = 4$ bit.
 
 I 24 segnali individuati permettono di controllare l'unità operativa per un
 ciclo di clock; per completare una microistruzione, è necessario aggiungere due
-campi aggiuntivi, che chiamiamo \lstinline{NEXT_ADDRESS} e \lstinline{JAM}, che
+campi aggiuntivi, che chiamiamo \lstinline{Addr} e \lstinline{JAM}, che
 descriveremo approfonditamente quando parleremo dell'unità di controllo; per il
 momento, è sufficiente sapere che sono necessari a determinare la
 microistruzione da eseguire nel ciclo di clock successivo.
@@ -594,9 +589,9 @@ di codificare gli altri campi delle microistruzioni:
 
 \subsection{Il linguaggio MAL: parte 1}
 
-Scrivendo a mano le microistruzioni, come nell'esempio precedente, è molto
+Scrivere a mano le microistruzioni è perfettamente possibile, ma è molto
 semplice commettere errori; inoltre, il microprogramma così ottenuto sarebbe
-praticamente impossibile da comprendere all'occhio umano.
+tedioso da comprendere e modificare.
 
 \begin{figure}
   \centering
@@ -604,15 +599,18 @@ praticamente impossibile da comprendere all'occhio umano.
   \caption{Le operazioni permesse nel linguaggio MAL}\label{fig:mal_ops}
 \end{figure}
 
-Il linguaggio usato in~\cite{tanenbaum} per la scrittura del microprogramma è
-denominato MAL (\textit{MicroAssembly Language}). Introduciamo anzitutto la
-notazione necessaria a specificare il controllo dei bus \lstinline{B} e
-\lstinline{C} e dell'ALU; le operazioni permesse sono riportate in
-fig.~\ref{fig:mal_ops}, dove \lstinline{SOURCE} è uno dei registri connessi al
-bus \lstinline{B} e \lstinline{DEST} una combinazione di registri connessi al
-bus \lstinline{C}, eventualmente separati dal simbolo \lstinline{=}; ad esempio,
-per incrementare il contenuto del registro \lstinline{SP} e scriverlo sia in
-\lstinline{SP} che in \lstinline{MAR}, si scrive:
+Il linguaggio usato in~\cite{tanenbaum} per semplificare la scrittura del
+microprogramma è denominato MAL (\textit{MicroAssembly Language}); un tool detto
+\textit{microassemblatore} esegue dunque la traduzione nel formato di
+fig.~\ref{fig:mu_instr}, completamente equivalente.
+
+Introduciamo anzitutto la notazione necessaria a specificare il controllo dei
+bus \lstinline{B} e \lstinline{C} e dell'ALU; le operazioni permesse sono
+riportate in fig.~\ref{fig:mal_ops}, dove \lstinline{SOURCE} è uno dei registri
+connessi al bus \lstinline{B} e \lstinline{DEST} una combinazione di registri
+connessi al bus \lstinline{C}, eventualmente separati dal simbolo \lstinline{=};
+ad esempio, per incrementare il contenuto del registro \lstinline{SP} e
+scriverlo sia in \lstinline{SP} che in \lstinline{MAR}, si scrive:
 
 \begin{lstlisting}
   SP = MAR = SP + 1
@@ -697,7 +695,7 @@ nel registro \lstinline{MBR}.
 \subsection{Il linguaggio MAL: parte 2}
 
 Possiamo a questo punto introdurre le parti mancanti del linguaggio MAL;
-osserviamo anzitutto il microcodice completo per l'istruzione \lstinline{IADD}:
+osserviamo il microcodice completo per l'istruzione \lstinline{IADD}:
 
 \begin{lstlisting}
   iadd = 0x65:
@@ -706,14 +704,13 @@ osserviamo anzitutto il microcodice completo per l'istruzione \lstinline{IADD}:
       MDR = TOS = MDR + H; wr; goto main
 \end{lstlisting}
 
-Abbiamo anzitutto aggiunto una label, \lstinline{iadd}, che permette di
-identificare la locazione del control store, seguita dall'indirizzo nel control
-store a partire dal quale verra posizionato il microcodice seguente (dunque
-0x65-0x67); in assenza di indicazioni esplicite, il campo \lstinline{Addr}
-contiene semplicemente l'indirizzo della microistruzione successiva (dunque in
-questo caso, le prime due istruzioni, situate agli indirizzi 0x65 e 0x66 nel
-control store, avranno campo \lstinline{Addr} posto rispettivamente a 0x66 e
-0x67).
+Abbiamo aggiunto una label, \lstinline{iadd}, che permette di identificare la
+locazione del control store, seguita dall'indirizzo nel control store a partire
+dal quale verra posizionato il microcodice seguente (dunque 0x65-0x67); in
+assenza di indicazioni esplicite, il campo \lstinline{Addr} contiene
+semplicemente l'indirizzo della microistruzione successiva (dunque in questo
+caso, le prime due istruzioni, situate agli indirizzi 0x65 e 0x66 nel control
+store, avranno campo \lstinline{Addr} posto rispettivamente a 0x66 e 0x67).
 
 Consideriamo invece l'ultima microistruzione; abbiamo aggiunto un'ulteriore
 parte alla microistruzione, che influenza il suo campo \lstinline{Addr}:
@@ -736,8 +733,9 @@ Osserviamo anche il microcodice relativo alla label \lstinline{main}:
 
 Questa microistruzione è particolarmente importante, in quanto ogni istruzione
 IJVM si conclude tornando ad essa; la sua funziona è incrementare il program
-counter, fare il fetch del successivo byte di istruzione e usare questo byte
-come prossimo valore del microprogram counter; il campo
+counter, fare il fetch del successivo byte di istruzione e usare il contenuto
+del registro \lstinline{MBR} come prossimo valore del microprogram counter; il
+campo
 
 \begin{lstlisting}
   goto (MBR)
@@ -813,7 +811,7 @@ subtype ctrl_str_word_type is std_logic_vector(ctrl_str_word_width - 1 downto 0)
 type ctrl_str_type is array (ctrl_str_words - 1 downto 0) of ctrl_str_word_type;
 \end{myvhdl}
 
-L'implementazione del control store è molto semplice: un \lstinline{process}
+L'implementazione della control unit è molto semplice: un \lstinline{process}
 aggiorna il registro \lstinline{MIR} con la microistruzione corrente, i cui bit
 del campo \lstinline{Addr}, opportunamente mascherati, costituiscono il registro
 ``virtuale'' \lstinline{MPC}:
@@ -855,6 +853,138 @@ begin
       unsigned(mir_reg(ctrl_b'range)))) <= '1';
   end if;
 end process reg_to_b_decoder;
+\end{myvhdl}
+
+\subsection{Collegarmento tra UO e UC}
+
+Siamo finalmente in grado di definire le \lstinline{entity} relative all'unità
+operativa e all'unità di controllo.
+
+Entrambe le unità devono ricevere:
+\begin{itemize}
+  \item un segnale di clock;
+  \item un segnale di reset.
+\end{itemize}
+Questi segnali sono comuni.
+
+L'unità di controllo fornisce all'unità operativa i segnali relativi:
+\begin{itemize}
+  \item al controllo dell'ALU;
+  \item al controllo del bus \lstinline{C};
+  \item al controllo del bus \lstinline{B};
+  \item al controllo della memoria.
+\end{itemize}
+
+Riceve invece da essa:
+\begin{itemize}
+  \item i flag dell'ALU;
+  \item il contenuto del registro \lstinline{MBR}.
+\end{itemize}
+
+\begin{myvhdl}{control\_unit.vhd}
+ entity control_unit is
+  port (
+    --! Clock
+    clk              : in  std_logic;
+    --! Synchronous active-high reset
+    reset            : in  std_logic;
+    --! Content of the MBR register
+    mbr_reg_in       : in  mbr_data_type;
+    --! ALU negative flag
+    alu_n_flag       : in  std_logic;
+    --! ALU zero flag
+    alu_z_flag       : in  std_logic;
+    --! Control signals for the ALU
+    alu_control      : out alu_ctrl_type;
+    --! Control signals for the C bus
+    c_to_reg_control : out c_ctrl_type;
+    --! Control signals for memory operations
+    mem_control      : out mem_ctrl_type;
+    --! Control signals for the B bus
+    reg_to_b_control : out b_ctrl_type
+    );
+end entity control_unit;
+\end{myvhdl}
+
+In aggiunta a questi segnali, ci aspettiamo di trovare nell'\lstinline{entity}
+dell'unità operativa anche i porti relativi all'interfaccia con la memoria:
+\begin{itemize}
+  \item indirizzo dati;
+  \item ingresso dati;
+  \item uscita dati;
+  \item write enable dati;
+  \item indirizzo istruzioni;
+  \item ingresso istruzioni.
+\end{itemize}
+
+\begin{myvhdl}{datapath.vhd}
+entity datapath is
+  port (
+    --! Clock
+    clk              : in  std_logic;
+    --! Synchronous active-high reset
+    reset            : in  std_logic;
+    --! Control signals for the ALU
+    alu_control      : in  alu_ctrl_type;
+    --! Control signals for the C bus
+    c_to_reg_control : in  c_ctrl_type;
+    --! Control signals for memory operations
+    mem_control      : in  mem_ctrl_type;
+    --! Control signals for the B bus
+    reg_to_b_control : in  b_ctrl_type;
+    --! Content of the MBR register
+    mbr_reg_out      : out mbr_data_type;
+    --! ALU negative flag
+    alu_n_flag       : out std_logic;
+    --! ALU zero flag
+    alu_z_flag       : out std_logic;
+    --! Memory data write enable
+    mem_data_we      : out std_logic;
+    --! Port for memory data read
+    mem_data_in      : in  reg_data_type;
+    --! Port for memory data write
+    mem_data_out     : out reg_data_type;
+    --! Memory address for memory data operations
+    mem_data_addr    : out reg_data_type;
+    --! Port for memory instruction read
+    mem_instr_in     : in  mbr_data_type;
+    --! Memory address for memory instruction fetch
+    mem_instr_addr   : out reg_data_type
+    );
+end entity datapath;
+\end{myvhdl}
+
+Infine, introduciamo il componente \lstinline{processor} all'interno del quale
+sono istanziati sia il \lstinline{datapath} che la \lstinline{control_unit}.
+Tutte le coppie di porti corrispondenti sono connesse internamente, mentre sono
+esposti quelli relativi:
+\begin{itemize}
+  \item al clock;
+  \item al reset;
+  \item all'interfaccia con la memoria.
+\end{itemize}
+
+\begin{myvhdl}{processor.vhd}
+entity processor is
+  port (
+    --! Clock
+    clk            : in  std_logic;
+    --! Synchronous active-high reset
+    reset          : in  std_logic;
+    --! Memory data write enable
+    mem_data_we    : out std_logic;
+    --! Port for memory data read
+    mem_data_in    : in  reg_data_type;
+    --! Port for memory data write
+    mem_data_out   : out reg_data_type;
+    --! Memory address for memory data operations
+    mem_data_addr  : out reg_data_type;
+    --! Port for memory instruction read
+    mem_instr_in   : in  mbr_data_type;
+    --! Memory address for memory instruction fetch
+    mem_instr_addr : out reg_data_type
+    );
+end entity processor;
 \end{myvhdl}
 
 \chapter{La Toolchain Mic-1}
