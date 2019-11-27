@@ -238,7 +238,7 @@ signal c_bus : reg_data_type;
     \end{column}
     \begin{column}{0.5\textwidth}
       Il multiplexer che disciplina l'accesso al bus \lstinline{B} è
-      implementato utilizzando il costrutto \lstinline{with}:
+      implementato utilizzando il costrutto \lstinline{with/select}:
       \begin{myvhdl}{datapath.vhd}
 with reg_to_b_control select b_bus <=
   mdr_reg         when b_ctrl_mdr,
