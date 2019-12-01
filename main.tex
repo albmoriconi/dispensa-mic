@@ -685,7 +685,7 @@ sono combinati con i valori dei flag \lstinline{N} e \lstinline{Z} dell'ALU, e
 permettono di modificare il bit più significativo dell'\lstinline{MPC}:
 
 \begin{lstlisting}
-  MPC[8] = (JAMZ AND Z) OR (JAMN AND N) OR Add[8]
+  MPC[8] = (JAMZ AND Z) OR (JAMN AND N) OR Addr[8]
 \end{lstlisting}
 
 Inoltre, se il bit \lstinline{JMPC} è asserito, gli 8 bit meno significativi di

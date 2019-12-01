@@ -43,6 +43,15 @@
   top=0.5mm,
   bottom=0.5mm,
   minted options={fontsize=\tiny,breaklines,formatcom=\BashFancyFormatLine}}
+\newtcblisting{basetcblisting}{%
+  listing only,
+  breakable,
+  boxsep=0.5mm,
+  left=0.5mm,
+  right=0.5mm,
+  top=0.5mm,
+  bottom=0.5mm,
+}
 
 \usepackage{courier}
 
@@ -64,6 +73,32 @@
 \begin{frame}
 \titlepage{}
 \end{frame}
+
+\section{Introduzione}
+\begin{frame}[fragile]
+  \frametitle{Macchine a Stack}
+  Il processore Mic-1 è una macchina \textit{a stack}, e non dispone di registri generali.
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      Consideriamo l'istruzione Java:
+      \begin{basetcblisting}
+a1 = a2 + a3\end{basetcblisting}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      In assembly IJVM, è tradotta come:
+      \begin{basetcblisting}
+ILOAD a2    (a)
+ILOAD a3    (b)
+IADD        (c)
+ISTORE a1   (d)\end{basetcblisting}
+    \end{column}
+  \end{columns}
+  Osserviamo come evolve lo stack:
+  \begin{center}
+    \includegraphics[width=\textwidth]{stack_add.png}
+  \end{center}
+\end{frame}
+
 \section{Unità Operativa}
 \begin{frame}[fragile]
   \frametitle{Unità Operativa}
@@ -103,7 +138,6 @@ end architecture behavioral;
   \end{columns}
 \end{frame}
 
-\section{Unità Operativa}
 \begin{frame}[fragile]
   \frametitle{Componenti}
   \begin{columns}
@@ -179,6 +213,41 @@ end process reg_proc;
 \end{myvhdl}
     \end{column}
   \end{columns}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Convenzioni sui Registri}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+  Alcuni registri sono cablati in modo da poter essere usati solo per uno scopo
+  specifico:
+  \begin{itemize}
+    \item i registri dell'interfaccia con la memoria:
+    \begin{itemize}
+      \item \lstinline{MAR} - memory address register;
+      \item \lstinline{MDR} - memory data register;
+      \item \lstinline{PC} - program counter;
+      \item \lstinline{MBR} - memory byte register;
+    \end{itemize}
+    \item il registro che mantiene il primo operando dell'ALU:
+    \begin{itemize}
+      \item \lstinline{H} - holding.
+    \end{itemize}
+  \end{itemize}
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+  Gli altri registri sono funzionalmente uguali, ed i loro nomi sono assegnati
+  sulla base dell'uso che se ne fa nel microprogramma:
+  \begin{itemize}
+    \item \lstinline{SP} - stack pointer;
+    \item \lstinline{LV} - local variables;
+    \item \lstinline{CPP} - constant pool pointer;
+    \item \lstinline{TOS} - top of stack;
+    \item \lstinline{OPC} - scratch register.
+  \end{itemize}
+\end{column}
+\end{columns}
 \end{frame}
 
 \begin{frame}[fragile]
@@ -296,6 +365,8 @@ with reg_to_b_control select b_bus <=
     disponibile nel registro \lstinline{MDR} al fronte di clock successivo
     rispetto a quello in cui l'indirizzo è posto nel registro \lstinline{MAR}.
   \end{itemize}
+  L'interfaccia \lstinline{PC}/\lstinline{MBR} opera in modo simile in lettura,
+  e non prevede operazioni di scrittura.
 \end{frame}
 
 \section{Microistruzioni}
@@ -368,6 +439,25 @@ di codificare gli altri campi delle microistruzioni:
 \end{frame}
 
 \section{Unità di Controllo}
+\begin{frame}
+  \frametitle{Unità di Controllo}
+  \begin{columns}
+    \begin{column}{0.6\textwidth}
+      \begin{center}
+        \includegraphics[width=\textwidth]{mic1.png}
+      \end{center}
+    \end{column}
+    \begin{column}{0.4\textwidth}
+      L'unità di controllo del Mic-1 si comporta come un \textit{sequencer},
+      producendo in ciascun ciclo:
+\begin{enumerate}
+  \item lo stato dei segnali di controllo;
+  \item l'indirizzo della prossima microistruzione da eseguire.
+\end{enumerate}
+    \end{column}
+  \end{columns}
+\end{frame}
+
 \begin{frame}[fragile]
   \frametitle{Control Store}
   Le microistruzioni sono memorizzate in una ROM interna all'unità di controllo,
@@ -413,6 +503,34 @@ type ctrl_str_type is array (ctrl_str_words - 1 downto 0) of ctrl_str_word_type;
 \end{frame}
 
 \begin{frame}[fragile]
+  \frametitle{Altra Logica di Controllo}
+  Inoltre, l'unità di controllo contiene:
+  \begin{itemize}
+    \item i registri \lstinline{MIR} e \lstinline{MPC} di interfaccia con il
+    control store;
+    \item il decoder per i segnali di controllo del bus \lstinline{B};
+    \item la logica per determinare l'indirizzo della prossima microistruzione.
+  \end{itemize}
+  A livello microprogramma, i salti sono controllati mediante il campo
+  \lstinline{JAM}: i due bit \lstinline{JAMN} e \lstinline{JAMZ}
+  sono combinati con i valori dei flag \lstinline{N} e \lstinline{Z} dell'ALU, e
+  permettono di modificare il bit più significativo dell'\lstinline{MPC}:
+
+\begin{lstlisting}
+  MPC[8] = (JAMZ AND Z) OR (JAMN AND N) OR Addr[8]
+\end{lstlisting}
+
+  Se il bit \lstinline{JMPC} è asserito, gli 8 bit meno significativi di
+  \lstinline{MPC} sono messi in \lstinline{OR} bit-a-bit con gli 8 bit contenuti
+  nel registro \lstinline{MBR}:
+
+\begin{lstlisting}
+  MPC[7:0] = Addr[7:0] OR (MBR[7:0] AND JMPC)
+\end{lstlisting}
+
+\end{frame}
+
+\begin{frame}[fragile]
   \frametitle{Sequencing delle Microistruzioni}
   L'unità di controllo si comporta effettivamente come un \textit{sequencer}.
   \begin{columns}
@@ -443,6 +561,64 @@ iadd = 0x65:
   microistruzione alla label \lstinline{main}, che esegue il fetch della
   prossima istruzione.
 \end{enumerate}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Esempi di Istruzioni IJVM}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      Esempi di codici di movimento:
+\begin{myvhdl}{ajvm.mal}
+iload = 0x15:
+        H = LV
+        MAR = MBRU + H; rd
+iload_cont:
+        MAR = SP = SP + 1
+        PC = PC + 1; fetch; wr
+        TOS = MDR; goto main
+
+istore = 0x36:
+        H = LV
+        MAR = MBRU + H
+istore_cont:
+        MDR = TOS; wr
+        SP = MAR = SP - 1; rd
+        PC = PC + 1; fetch
+        TOS = MDR; goto main
+\end{myvhdl}
+\end{column}
+\begin{column}{0.5\textwidth}
+  Esempi di codici di salto:
+\begin{myvhdl}{ajvm.mal}
+ijvm_goto = 0xA7:
+        OPC = PC - 1
+goto_cont:
+        PC = PC + 1; fetch
+        H = MBR << 8
+        H = MBRU OR H
+        PC = OPC + H; fetch
+        goto main
+
+[...]
+
+ifeq = 0x99:
+        MAR = SP = SP - 1; rd
+        OPC = TOS
+        TOS = MDR
+        Z = OPC; if (Z) goto T; else goto F
+
+[...]
+
+T:
+        OPC = PC - 1; fetch; goto goto_cont
+
+F:
+        PC = PC + 1
+        PC = PC + 1; fetch
+        goto main
+\end{myvhdl}
+    \end{column}
+    \end{columns}
 \end{frame}
 
 \section{Toolchain}
@@ -546,7 +722,7 @@ Per aggiungere altri testbench alla suite:
       \item Dunque, si può aggiungere un nuovo testbench alla batteria o
       modificare quello già esistente (\lstinline{processor_tb.vhd}).
     \end{itemize}
-    \item Modificare l'operazione eseguita da una istruzione IJVM.
+    \item Modificare l'operazione eseguita da un'istruzione IJVM.
     \begin{itemize}
       \item È necessario modificare il microprogramma (\lstinline{ajvm.mal}) e
       ricreare il control store.
