@@ -621,6 +621,33 @@ F:
     \end{columns}
 \end{frame}
 
+\begin{frame}
+  \frametitle{Esempi di Istruzioni IJVM (2)}
+  Consideriamo l'istruzione \lstinline{ILOAD varnum}, con \lstinline{varnum}
+  variabile da caricare su stack (offset rispetto al puntatore in
+  \lstinline{LV}), codificata su 1 byte:
+  \begin{enumerate}
+    \item il puntatore contenuto in \lstinline{LV} è scritto in \lstinline{H};
+    \item in \lstinline{MAR} è posta la somma base \lstinline{LV} + offset
+    \lstinline{MBRU}, e si abilita la lettura;
+    \begin{itemize}
+      \item \lstinline{MBRU} significa: contenuto di \lstinline{MBR}, come
+      unsigned;
+      \item il contenuto di \lstinline{MBR} è il risultato dell'ultimo
+      \lstinline{fetch} eseguito dalla microistruzione \lstinline{main};
+    \end{itemize}
+    \item \lstinline{MAR} e \lstinline{SP} sono posti ad una nuova posizione
+    vuota su stack (dove sarà fatto il push del nuovo elemento); inoltre il dato
+    di cui eseguire il push è ora disponibile in \lstinline{MDR};
+    \item \lstinline{PC} è incrementato e si fa il \lstinline{fetch} della
+    prossima istruzione (in modo che \lstinline{main} possa eseguire il
+    \lstinline{goto} alla microistruzione corretta); si esegue anche la
+    scrittura (push) in memoria;
+    \item il contenuto di \lstinline{TOS} è aggiornato con il dato di cui si è
+    eseguito il push.
+  \end{enumerate}
+\end{frame}
+ 
 \section{Toolchain}
 \begin{frame}[fragile]
   \frametitle{Installazione dei Tool}
