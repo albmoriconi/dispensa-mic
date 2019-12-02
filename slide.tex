@@ -82,15 +82,15 @@
     \begin{column}{0.5\textwidth}
       Consideriamo l'istruzione Java:
       \begin{basetcblisting}
-a1 = a2 + a3;\end{basetcblisting}
+  a1 = a2 + a3;\end{basetcblisting}
     \end{column}
     \begin{column}{0.5\textwidth}
       In assembly IJVM, è tradotta come:
       \begin{basetcblisting}
-ILOAD a2    (a)
-ILOAD a3    (b)
-IADD        (c)
-ISTORE a1   (d)\end{basetcblisting}
+  ILOAD a2    (a)
+  ILOAD a3    (b)
+  IADD        (c)
+  ISTORE a1   (d)\end{basetcblisting}
     \end{column}
   \end{columns}
   Osserviamo come evolve lo stack:
@@ -385,7 +385,7 @@ with reg_to_b_control select b_bus <=
 \begin{frame}
   \frametitle{Formato delle Microistruzioni}
   \begin{center}
-    \includegraphics[width=\textwidth]{mu_instr_small.png}
+    \includegraphics[width=0.8\textwidth]{mu_instr_small.png}
   \end{center}
 \begin{itemize}
   \item \lstinline{Addr} - Indirizzo di una potenziale prossima microistruzione;
@@ -740,7 +740,7 @@ Per aggiungere altri testbench alla suite:
     \begin{itemize}
       \item È necessario modificare il programma (\lstinline{program.ajvm}) e
       ricreare la RAM.
-      \item Dunque, si può aggiungere un nuovo testbench alla batteria o
+      \item Dunque, si può aggiungere un nuovo testbench alla suite o
       modificare quello già esistente (\lstinline{processor_tb.vhd}).
     \end{itemize}
     \item Modificare l'operazione eseguita da un'istruzione IJVM.
