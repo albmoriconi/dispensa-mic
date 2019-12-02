@@ -92,7 +92,7 @@ Per iniziare a comprendere come opera un processore di questo tipo, consideriamo
 ad esempio l'esecuzione dell'operazione di somma e assegnazione
 
 \begin{tcblisting}{listing only}
-  a1 = a2 + a3
+  a1 = a2 + a3;
 \end{tcblisting}
 
 che è tradotta in linguaggio assembly IJVM come
@@ -200,6 +200,32 @@ essere scritto su più registri se necessario.
   multiplexer in quanto gli FPGA di cui facciamo uso dispongono di buffer
   tri-state esclusivamente ai pad di IO.
 \end{mynote}
+
+Alcuni registri sono cablati in modo da poter essere usati solo per uno scopo
+specifico:
+\begin{itemize}
+  \item i registri dell'interfaccia con la memoria:
+    \begin{itemize}
+      \item \lstinline{MAR} - memory address register;
+      \item \lstinline{MDR} - memory data register;
+      \item \lstinline{PC} - program counter;
+      \item \lstinline{MBR} - memory byte register;
+    \end{itemize}
+  \item il registro che mantiene il primo operando dell'ALU:
+    \begin{itemize}
+      \item \lstinline{H} - holding.
+    \end{itemize}
+\end{itemize}
+
+Gli altri registri sono funzionalmente equivalenti, ed i loro nomi sono
+assegnati sulla base dell'uso che se ne fa nel microprogramma:
+\begin{itemize}
+  \item \lstinline{SP} - stack pointer;
+  \item \lstinline{LV} - local variables;
+  \item \lstinline{CPP} - constant pool pointer;
+  \item \lstinline{TOS} - top of stack;
+  \item \lstinline{OPC} - scratch register.
+\end{itemize}
 
 \subsection{L'Unità Aritmetico Logica}
 

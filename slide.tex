@@ -82,7 +82,7 @@
     \begin{column}{0.5\textwidth}
       Consideriamo l'istruzione Java:
       \begin{basetcblisting}
-a1 = a2 + a3\end{basetcblisting}
+a1 = a2 + a3;\end{basetcblisting}
     \end{column}
     \begin{column}{0.5\textwidth}
       In assembly IJVM, è tradotta come:
@@ -237,8 +237,8 @@ end process reg_proc;
   \end{column}
 
   \begin{column}{0.5\textwidth}
-  Gli altri registri sono funzionalmente uguali, ed i loro nomi sono assegnati
-  sulla base dell'uso che se ne fa nel microprogramma:
+    Gli altri registri sono funzionalmente equivalenti, ed i loro nomi sono
+    assegnati sulla base dell'uso che se ne fa nel microprogramma:
   \begin{itemize}
     \item \lstinline{SP} - stack pointer;
     \item \lstinline{LV} - local variables;
@@ -279,17 +279,9 @@ end architecture behavioral;
 \end{myvhdl}
 \end{column}
 \begin{column}{0.5\textwidth}
-\begin{myvhdl}{datapath.vhd}
--- ALU instantiation
-alu : entity work.alu
-  port map (
-    control       => alu_control,
-    operand_a     => a_bus,
-    operand_b     => b_bus,
-    sh_result     => c_bus,
-    negative_flag => alu_n_flag,
-    zero_flag     => alu_z_flag);
-\end{myvhdl}
+\begin{center}
+  \includegraphics[width=\textwidth]{alu_func.png}
+\end{center}
 \end{column}
 \end{columns}
 \end{frame}
@@ -355,7 +347,7 @@ with reg_to_b_control select b_bus <=
 \begin{frame}
   \frametitle{Protocollo con la Memoria}
   \begin{center}
-    \includegraphics[width=0.5\textwidth]{mem_prot.png}
+    \includegraphics[width=0.4\textwidth]{mem_prot.png}
   \end{center}
   \begin{itemize}
     \item Per eseguire una scrittura, l'indirizzo e il dato devono essere
@@ -365,8 +357,10 @@ with reg_to_b_control select b_bus <=
     disponibile nel registro \lstinline{MDR} al fronte di clock successivo
     rispetto a quello in cui l'indirizzo è posto nel registro \lstinline{MAR}.
   \end{itemize}
-  L'interfaccia \lstinline{PC}/\lstinline{MBR} opera in modo simile in lettura,
-  e non prevede operazioni di scrittura.
+  \begin{block}{Interfaccia istruzioni}
+    L'interfaccia \lstinline{PC}/\lstinline{MBR} opera in modo simile in lettura,
+    e non prevede operazioni di scrittura.
+  \end{block}
 \end{frame}
 
 \section{Microistruzioni}
