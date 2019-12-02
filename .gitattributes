@@ -1,2 +1,1 @@
-UseLATEX.cmake linguist-vendored
-
+cmake/* linguist-vendored

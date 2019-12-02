@@ -5,7 +5,7 @@ project(dispensa-mic NONE)
 set(LATEX_COMPILER_FLAGS
   "--shell-escape"
   CACHE STRING "Flags passed to LaTeX")
-include(UseLATEX.cmake)
+include(cmake/UseLATEX.cmake)
 
 add_latex_document(main.tex
   IMAGE_DIRS images)
