@@ -752,4 +752,35 @@ Per aggiungere altri testbench alla suite:
     \end{itemize}
   \end{enumerate}
 \end{frame}
+
+\begin{frame}
+  \frametitle{Esercizi \textbf{Facoltativi}}
+  \begin{enumerate}
+    \item Sintetizzare su FPGA il processore.
+    \begin{itemize}
+      \item Così come implementato, potrebbe essere "troppo grande" per
+      alcune board;
+      \item in questo caso, conviene ridurre la dimensione della RAM:
+      \begin{itemize}
+        \item nel file \lstinline{dp_ar_ram.vhd} va ridotta la distanza tra
+        l'area codice e il constant pool;
+        \item nel file \lstinline{datapath.vhd} va corretto il puntatore al
+        constant pool e quello allo stack;
+        \item infine, nel file \lstinline{common_defs.vhd} va ridotta la
+        dimensione della RAM, impostando \lstinline{dp_ar_ram_size} e.g. a
+        64 word da 32 bit.
+      \end{itemize}
+    \end{itemize}
+    \item Collegare al processore delle periferiche di IO.
+    \begin{itemize}
+      \item Un esempio completo è fornito nel branch \lstinline{pwm} del
+      repository git;
+      \item al processore sono state aggiunte le istruzioni \lstinline{gload} e
+      \lstinline{gstore} per interfacciarsi con i registri memory mapped delle
+      periferiche;
+      \item il file \lstinline{device_mux.vhd} implementa una logica elementare
+      per assegnare parte dello spazio di indirizzamento alle periferiche di IO.
+    \end{itemize}
+  \end{enumerate}
+\end{frame}
 \end{document}
