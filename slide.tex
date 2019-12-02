@@ -756,6 +756,7 @@ Per aggiungere altri testbench alla suite:
 \begin{frame}
   \frametitle{Esercizi \textbf{Facoltativi}}
   \begin{enumerate}
+    \setcounter{enumi}{2}
     \item Sintetizzare su FPGA il processore.
     \begin{itemize}
       \item Così come implementato, potrebbe essere "troppo grande" per
@@ -771,11 +772,11 @@ Per aggiungere altri testbench alla suite:
         64 word da 32 bit.
       \end{itemize}
     \end{itemize}
-    \item Collegare al processore delle periferiche di IO.
+    \item Collegare al processore una o più periferiche di IO.
     \begin{itemize}
       \item Un esempio completo è fornito nel branch \lstinline{pwm} del
       repository git;
-      \item al processore sono state aggiunte le istruzioni \lstinline{gload} e
+      \item all'instruction set  sono state aggiunte le istruzioni \lstinline{gload} e
       \lstinline{gstore} per interfacciarsi con i registri memory mapped delle
       periferiche;
       \item il file \lstinline{device_mux.vhd} implementa una logica elementare
