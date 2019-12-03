@@ -344,11 +344,12 @@ with reg_to_b_control select b_bus <=
 \end{columns}
 \end{frame}
 
-\begin{frame}
+\begin{frame} [fragile]
   \frametitle{Protocollo con la Memoria}
   \begin{center}
     \includegraphics[width=0.4\textwidth]{mem_prot.png}
   \end{center}
+  Consideriamo l'interfaccia dati \lstinline{MAR}/\lstinline{MDR} (indirizzo e dato su 32 bit):
   \begin{itemize}
     \item Per eseguire una scrittura, l'indirizzo e il dato devono essere
     disponibili nei registri \lstinline{MAR} e \lstinline{MDR} al fronte di
@@ -357,10 +358,45 @@ with reg_to_b_control select b_bus <=
     disponibile nel registro \lstinline{MDR} al fronte di clock successivo
     rispetto a quello in cui l'indirizzo è posto nel registro \lstinline{MAR}.
   \end{itemize}
-  \begin{block}{Interfaccia istruzioni}
-    L'interfaccia \lstinline{PC}/\lstinline{MBR} opera in modo simile in lettura,
-    e non prevede operazioni di scrittura.
-  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Protocollo con la Memoria (2)}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      La lettura e la generazione del segnale di \textit{write enable} sono
+      implementate in un \lstinline{process}:
+      \begin{myvhdl}{datapath.vhd}
+-- Processor registers
+reg_proc : process(clk) is
+begin
+  [...]
+  if c_to_reg_control(c_ctrl_mdr) = '1' then
+    mdr_reg <= c_bus;
+  elsif rd_ff = '1' then
+    mdr_reg <= mem_data_in;
+  end if;
+  [...]
+  wr_ff <= mem_control(mem_ctrl_write);
+end process;
+\end{myvhdl}
+\end{column}
+\begin{column}{0.5\textwidth}
+  I registri dell'interfaccia e il segnale di \textit{write enable} sono
+  assegnati alle uscite dell'\lstinline{entity}:
+  \begin{myvhdl}{datapath.vhd}
+-- Output
+mem_data_out  <= mdr_reg;
+mem_data_addr <= mar_reg;
+mem_data_we   <= wr_ff;
+\end{myvhdl}
+\end{column}
+\end{columns}
+\begin{block}{Interfaccia istruzioni}
+  L'interfaccia istruzioni \lstinline{PC}/\lstinline{MBR} (indirizzo su 32 bit,
+  dato su 8 bit) opera in modo simile in lettura, e non prevede operazioni di
+  scrittura.
+\end{block}
 \end{frame}
 
 \section{Microistruzioni}
@@ -521,7 +557,35 @@ type ctrl_str_type is array (ctrl_str_words - 1 downto 0) of ctrl_str_word_type;
 \begin{lstlisting}
   MPC[7:0] = Addr[7:0] OR (MBR[7:0] AND JMPC)
 \end{lstlisting}
+\end{frame}
 
+\begin{frame}[fragile]
+  \frametitle{Altra Logica di Controllo (2)}
+  Il decoder è implementato con un \lstinline{process}:
+  \begin{myvhdl}{control\_unit.vhd}
+-- B_BUS control decoder
+reg_to_b_decoder : process(mir_reg(ctrl_b'range)) is
+begin
+  reg_to_b_decoder_out <= (others => '0');
+
+  if unsigned(mir_reg(ctrl_b'range)) < b_ctrl_width then
+    reg_to_b_decoder_out(to_integer(unsigned(mir_reg(ctrl_b'range)))) <= '1';
+  end if;
+end process reg_to_b_decoder;
+\end{myvhdl}
+La logica di salto è implementata con delle assegnazioni su un \textit{virtual
+  register}, i.e. dei semplici \lstinline{signal} che rimangono stabili fino al
+fronte di clock successivo:
+\begin{myvhdl}{control\_unit.vhd}
+-- MPC virtual register
+ctrl_nxt_addr_no_msb <= mir_reg(ctrl_nxt_addr_no_msb_type'range);
+jmpc_addr <= ctrl_nxt_addr_no_msb or mbr_reg_in
+             when mir_reg(ctrl_jmpc) = '1'
+             else ctrl_nxt_addr_no_msb;
+high_bit <= (alu_n_flag and mir_reg(ctrl_jamn))
+            or (alu_z_flag and mir_reg(ctrl_jamz));
+mpc_virtual_reg <= (mir_reg(ctrl_nxt_addr_msb) or high_bit) & jmpc_addr;
+\end{myvhdl}
 \end{frame}
 
 \begin{frame}[fragile]
