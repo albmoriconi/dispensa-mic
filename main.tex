@@ -495,6 +495,47 @@ with reg_to_b_control select b_bus <=
   (others => '0') when others;
 \end{myvhdl}
 
+\subsection{Implementazione del Protocollo con la Memoria}
+
+La lettura e la generazione del segnale di \textit{write enable} sono
+implementate nello stesso \lstinline{process} utilizzato per gli altri registri;
+il dato proveniente dalla memoria è considerato come un'ulteriore possibile
+sorgente per il dato, in aggiunta al bus \lstinline{C}:
+
+\begin{myvhdl}{datapath.vhd}
+-- Processor registers
+reg_proc : process(clk) is
+begin
+
+  [...]
+
+  if c_to_reg_control(c_ctrl_mdr) = '1' then
+    mdr_reg <= c_bus;
+  elsif rd_ff = '1' then
+    mdr_reg <= mem_data_in;
+  end if;
+
+  [...]
+
+  wr_ff <= mem_control(mem_ctrl_write);
+end process;
+\end{myvhdl}
+
+I registri dell'interfaccia e il segnale di \textit{write enable} sono dunque
+assegnati alle uscite dell'\lstinline{entity}:
+
+\begin{myvhdl}{datapath.vhd}
+-- Output
+mem_data_out  <= mdr_reg;
+mem_data_addr <= mar_reg;
+mem_data_we   <= wr_ff;
+\end{myvhdl}
+
+\begin{mynote}{}{}
+  L'interfaccia istruzioni \lstinline{PC}/\lstinline{MBR} opera in modo simile
+  in lettura, e non prevede operazioni di scrittura.
+\end{mynote}
+
 \section{Le Microistruzioni}
 
 Per controllare l'unità operativa del processore, presentata in fig.
