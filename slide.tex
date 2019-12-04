@@ -436,7 +436,7 @@ mem_data_we   <= wr_ff;
 \end{frame}
 
 \begin{frame}
-  \frametitle{Esempio: l'istruzione \lstinline{IADD}}
+  \frametitle{Esempio: l'Istruzione \lstinline{IADD}}
   Trascurando per ora i campi \lstinline{Addr} e \lstinline{JAM}, siamo in grado
 di codificare gli altri campi delle microistruzioni:
 \begin{enumerate}
@@ -466,6 +466,162 @@ di codificare gli altri campi delle microistruzioni:
     \item \lstinline{B}: \lstinline{0000} (\lstinline{MDR} controlla il bus \lstinline{B}).
   \end{itemize}
 \end{enumerate}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Esempio: l'Istruzione \lstinline{IADD} - Microistruzione 1}
+  \begin{columns}
+    \begin{column}{0.4\textwidth}
+      \begin{center}
+        \includegraphics[width=\textwidth]{datapath-add1.png}
+      \end{center}
+    \end{column}
+    \begin{column}{0.6\textwidth}
+      \begin{enumerate}
+        \item
+          \begin{itemize}
+            \item \lstinline{ALU}: \lstinline{110110}
+            \item \lstinline{C}: \lstinline{000001001}
+            \item \lstinline{Mem}: \lstinline{010}
+            \item \lstinline{B}: \lstinline{0100}
+          \end{itemize}
+        \end{enumerate}
+        \medskip
+        \begin{myvhdl}{ajvm.mal}MAR = SP = SP - 1; rd\end{myvhdl}
+        \medskip
+        \begin{center}
+          \includegraphics[width=0.3\textwidth]{stack-add1.png}
+        \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Esempio: l'Istruzione \lstinline{IADD} - Microistruzione 1 (2)}
+  \begin{columns}
+    \begin{column}{0.4\textwidth}
+      \begin{center}
+        \includegraphics[width=\textwidth]{datapath-add1.png}
+      \end{center}
+    \end{column}
+    \begin{column}{0.6\textwidth}
+      Notiamo due cose importanti:
+      \begin{enumerate}
+        \item la microistruzione ha predisposto il percorso nel datapath, ma i
+        suoi effetti non sono visibili fino al fronte di clock successivo,
+        quando i registri vengono scritti;
+        \item il segnale di read \lstinline{rd} diventa alto al fronte di
+        clock successivo, in quanto è solo allora che l'indirizzo a cui eseguire
+        la lettura diventa disponibile sul registro \lstinline{MAR}.
+      \end{enumerate}
+      \medskip
+      \begin{center}
+        \includegraphics[width=0.3\textwidth]{stack-add1.png}
+      \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Esempio: l'Istruzione \lstinline{IADD} - Microistruzione 2}
+\begin{columns}
+    \begin{column}{0.4\textwidth}
+      \begin{center}
+        \includegraphics[width=\textwidth]{datapath-add2.png}
+      \end{center}
+    \end{column}
+    \begin{column}{0.6\textwidth}
+      \begin{enumerate}
+        \setcounter{enumi}{1}
+        \item
+          \begin{itemize}
+            \item \lstinline{ALU}: \lstinline{010100}
+            \item \lstinline{C}: \lstinline{100000000}
+            \item \lstinline{Mem}: \lstinline{000}
+            \item \lstinline{B}: \lstinline{0111}
+          \end{itemize}
+        \end{enumerate}
+        \medskip
+        \begin{myvhdl}{ajvm.mal}H = TOS\end{myvhdl}
+        \medskip
+        \begin{center}
+          \includegraphics[width=0.3\textwidth]{stack-add2.png}
+        \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Esempio: l'Istruzione \lstinline{IADD} - Microistruzione 3}
+\begin{columns}
+    \begin{column}{0.4\textwidth}
+      \begin{center}
+        \includegraphics[width=\textwidth]{datapath-add3.png}
+      \end{center}
+    \end{column}
+    \begin{column}{0.6\textwidth}
+      \begin{enumerate}
+        \setcounter{enumi}{2}
+        \item
+          \begin{itemize}
+            \item \lstinline{ALU}: \lstinline{111100}
+            \item \lstinline{C}: \lstinline{001000010}
+            \item \lstinline{Mem}: \lstinline{100}
+            \item \lstinline{B}: \lstinline{0000}
+          \end{itemize}
+        \end{enumerate}
+        \medskip
+        \begin{myvhdl}{ajvm.mal}MDR = TOS = MDR + H; wr\end{myvhdl}
+        \medskip
+        \begin{center}
+          \includegraphics[width=0.3\textwidth]{stack-add2.png}
+        \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Esempio: l'Istruzione \lstinline{IADD} - Ciclo 4}
+\begin{columns}
+    \begin{column}{0.4\textwidth}
+      \begin{center}
+        \includegraphics[width=\textwidth]{datapath-add4.png}
+      \end{center}
+    \end{column}
+    \begin{column}{0.6\textwidth}
+        Le microistruzioni dell'\lstinline{IADD} sono terminate.
+        Come vedremo in seguito, dopo ciascuna istruzione viene eseguita
+        una microistruzione speciale (\lstinline{main}) che ha il compito di:
+        \begin{enumerate}
+          \item prelevare un byte dalla memoria istruzioni;
+          \item saltare alla prossima microistruzione (cioè la prima della
+          sequenza relativa alla prossima istruzione).
+        \end{enumerate}
+        Sono ancora in corso gli effetti sulla memoria dell'istruzione \lstinline{IADD}.
+        \begin{center}
+          \includegraphics[width=0.3\textwidth]{stack-add2.png}
+        \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Esempio: l'Istruzione \lstinline{IADD} - Ciclo 5}
+\begin{columns}
+    \begin{column}{0.4\textwidth}
+      \begin{center}
+        \includegraphics[width=\textwidth]{datapath-add5.png}
+      \end{center}
+    \end{column}
+    \begin{column}{0.6\textwidth}
+      In questo ciclo si conclude la scrittura e viene eseguita la prima
+      microistruzione dell'istruzione successiva; gli effetti sulla memoria
+      dell'istruzione \lstinline{IADD} diventano visibili.
+      \begin{center}
+        \includegraphics[width=0.3\textwidth]{stack-add5.png}
+      \end{center}
+    \end{column}
+  \end{columns}
 \end{frame}
 
 \section{Unità di Controllo}
@@ -561,7 +717,7 @@ type ctrl_str_type is array (ctrl_str_words - 1 downto 0) of ctrl_str_word_type;
 
 \begin{frame}[fragile]
   \frametitle{Altra Logica di Controllo (2)}
-  Il decoder è implementato con un \lstinline{process}:
+  Il decoder è implementato con un \lstinline{process} puramente combinatorio:
   \begin{myvhdl}{control\_unit.vhd}
 -- B_BUS control decoder
 reg_to_b_decoder : process(mir_reg(ctrl_b'range)) is
