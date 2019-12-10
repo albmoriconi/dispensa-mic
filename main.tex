@@ -12,6 +12,13 @@
 
 \usepackage{tcolorbox}
 \tcbuselibrary{theorems,minted,breakable}
+\newtcbtheorem[number within=chapter]{warningbox}{Attenzione}{%
+  colback=red!5,
+  colframe=red!35!black,
+  breakable,
+  fonttitle=\bfseries,
+  before={\vspace{0.5cm}},
+  after={\vspace{0.5cm}}}{warning}
 \newtcbtheorem[number within=chapter]{mynote}{Nota}{%
   colback=blue!5,
   colframe=blue!35!black,
@@ -1066,43 +1073,48 @@ usato, ma in una tipica distribuzione Linux Debian-based (come Ubuntu) è
 sufficiente eseguire:
 
 \begin{commandshell}
-sudo apt install git gradle cmake
+  sudo apt install git gradle cmake
 \end{commandshell}
 
 Conviene dunque creare una nuova cartella per i repository da scaricare, e
 posizionarvici; al suo interno, creeremo anche una directory per i tool compilati:
 
 \begin{commandshell}
-mkdir esercitazione_mic
-cd esercitazione_mic
-mkdir tools
+  mkdir esercitazione_mic
+  cd esercitazione_mic
+  mkdir tools
 \end{commandshell}
 
 È possibile a questo punto compilare i tool (ignorando eventuali warning in fase
 di test):
 
 \begin{commandshell}
-git clone https://github.com/albmoriconi/mal.git
-cd mal
-./gradlew build
-cd ..
-git clone https://github.com/albmoriconi/ajvm.git
-cd ajvm
-./gradlew build
-cd ..
-tar -xvf mal/build/distributions/mal.tar -C tools/
-tar -xvf ajvm/build/distributions/ajvm.tar -C tools/
+  git clone https://github.com/albmoriconi/mal.git
+  cd mal
+  ./gradlew build
+  cd ..
+  git clone https://github.com/albmoriconi/ajvm.git
+  cd ajvm
+  ./gradlew build
+  cd ..
+  tar -xvf mal/build/distributions/mal.tar -C tools/
+  tar -xvf ajvm/build/distributions/ajvm.tar -C tools/
 \end{commandshell}
 
 Per poter usare i tool nella shell attiva, le loro directory vanno aggiunte al
-path di ricerca dei binari; il comando seguente può essere aggiunto al proprio
-profilo della shell o eseguito direttamente da riga di comando (in questo caso,
-deve essere eseguito nuovamente ogni volta che si apre una nuova shell, o i tool
-non saranno trovati):
+path di ricerca dei binari; può essere utile a questo scopo creare un file
+\lstinline{settings.sh} con il seguente contenuto:
 
 \begin{lstlisting}
-  PATH="$HOME/esercitazione_mic/tools/ajvm/bin:$HOME/esercitazione_mic/tools/mal/bin:$PATH"
+  export PATH="$HOME/esercitazione_mic/tools/ajvm/bin:$HOME/esercitazione_mic/tools/mal/bin:$PATH"
 \end{lstlisting}
+
+Sarà dunque possibile configurare correttamente l'ambiente eseguendo
+semplicemente il comando:
+
+\begin{commandshell}
+  source settings.sh
+\end{commandshell}
 
 Infine, è possibile eseguire il clone del repository contenente il codice VHDL
 del processore, e predisporne la directory per la build:
@@ -1170,11 +1182,34 @@ Il target \lstinline{check} lancia invece i testbench contenuti nella directory
   make check
 \end{commandshell}
 
+\begin{warningbox}{}{}
+  Modificando il programma contenuto nella RAM, il testbench
+  \lstinline{processor_tb.vhd} potrebbe fallire in quanto verifica il risultato
+  prodotto dal programma precaricato; due possibili soluzioni sono:
+  \begin{itemize}
+    \item modificare le condizioni alle righe 97-100 in modo da verificare le
+    nuove condizioni sul risultato; oppure
+    \item più semplicemente, si possono rimuovere le stesse righe; in questo
+    caso, se si usa il simulatore GHDL, sarà necessario terminare manualmente
+    l'esecuzione del tasto (\lstinline{Ctrl + C}) o modificare gli argomenti a
+    linea di comando per specificare la durata del test.
+  \end{itemize}
+\end{warningbox}
+
 Un esempio dei risultati della suite di test è riportato in
 fig.~\ref{fig:test}. L'esecuzione dei test produce anche le waveform relative
 alle esecuzioni dei testbench, come quella riportata in fig.~\ref{fig:waveform},
 che possono essere trovate nella directory \lstinline{build/src/test/vhdl} e
 visualizzate utilizzando il tool \lstinline{gtkwave}.
+
+\begin{warningbox}{}{}
+  Il comando \lstinline{make check} potrebbe non funzionare con tutte le
+  versioni di GHDL e CMake. Qualora si riscontrassero errori nell'esecuzione dei
+  test con questa modalità, è sufficiente importare manualmente i sorgenti
+  \lstinline{.vhd} contenuti nella directory \lstinline{amic-0/src/main/vhdl} e
+  il testbench \lstinline{amic-0/src/test/vhdl/processor_tb.vhd} in un progetto
+  ISE o Vivado, e utilizzare il simulatore Xilinx.
+\end{warningbox}
 
 Per aggiungere altri testbench alla suite è sufficiente salvarli nella
 directory \lstinline{test/vhdl} e modificare il file
