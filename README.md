@@ -5,6 +5,9 @@ di Elaborazione.
 
 ## Requisiti
 
+La versione più aggiornata dei documenti compilati è disponibile nella sezione [releases](https://github.com/albmoriconi/dispensa-mic/releases).
+
+In alternativa, per compilarli dai sorgenti LaTeX, sono necessari:
 * Una [distribuzione TeX](https://www.latex-project.org/get/)
 * CMake
 
