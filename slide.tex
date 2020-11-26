@@ -888,6 +888,8 @@ tar -xvf mal/build/distributions/mal.tar -C ~/tools/
 tar -xvf ajvm/build/distributions/ajvm.tar -C ~/tools/
 echo 'export PATH="$HOME/tools/ajvm/bin:$HOME/tools/mal/bin:$PATH"' >> ~/.bashrc
 git clone https://github.com/albmoriconi/amic-0.git
+cd amic-0
+cmake -B build
 \end{commandshell}
 \end{frame}
 
@@ -920,15 +922,14 @@ traccia dei sorgenti e aggiungerli ai target opportuni.
   \begin{itemize}
     \item \lstinline{src/main/mal/ajvm.mal} - microprogramma
     \begin{itemize}
-      \item \lstinline{make create_control_store}
+      \item \lstinline{cmake --build build --target create_control_store}
     \end{itemize}
     \item \lstinline{src/main/ajvm/program.ajvm} - programma
     \begin{itemize}
-      \item \lstinline{make create_ram}
+      \item \lstinline{cmake --build build --target create_ram}
     \end{itemize}
   \end{itemize}
-  \item Per lanciare la suite di test va lanciato il target \lstinline{make
-    check}
+  \item Per lanciare la suite di test va lanciato il target \lstinline{check}
   \item Le forme d'onda (visualizzabili con \lstinline{gtkwave}) sono salvate
   nella directory \lstinline{build/src/test/vhdl}.
 \end{enumerate}
