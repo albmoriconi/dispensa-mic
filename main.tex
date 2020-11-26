@@ -42,12 +42,13 @@
 \newtcblisting{commandshell}{%
   colback=black,
   colupper=white,
+  minted language=bash,
   breakable,
   colframe=yellow!75!black,
   listing only,
   before={\vspace{0.5cm}},
   after={\vspace{0.5cm}},
-  minted options={formatcom=\BashFancyFormatLine}}
+  minted options={fontsize=\footnotesize,breaklines,formatcom=\BashFancyFormatLine}}
 
 \usepackage{hyperref}
 
@@ -1065,24 +1066,32 @@ end entity processor;
 
 \section{Installazione}
 
-Per installare il microassemblatore \lstinline{mal} e l'assemblatore
-\lstinline{ajvm} è anzitutto necessario installare il version control system Git
-ed il build system Gradle; inoltre, per alcuni task useremo il build system
-Cmake. La procedura può variare leggermente a seconda del sistema operativo
-usato, ma in una tipica distribuzione Linux Debian-based (come Ubuntu) è
-sufficiente eseguire:
+La procedura seguente permette di installare il microassemblatore
+\lstinline{mal} e l'assemblatore \lstinline{ajvm}, oltre a una serie
+di dipendenze aggiuntive per poter simulare il processore. Possono
+esserci piccole variazioni a seconda del sistema operativo usato,
+quindi è consigliato utilizzare come versione di riferimento Ubuntu
+20.10.
+
+È necessario per prima cosa installare i tool essenziali per la
+compilazione, il version control system Git, il simulatore GHDL, il
+visualizzatore di forme d'onda gtkwave e il Java Development Kit.
 
 \begin{commandshell}
-  sudo apt install git gradle cmake
+  sudo apt install gcc g++ make cmake git ghdl-gcc gtkwave wget apt-transport-https gnupg
+  wget -qO - https://adoptopenjdk.jfrog.io/adoptopenjdk/api/gpg/key/public | sudo apt-key add -
+  echo "deb https://adoptopenjdk.jfrog.io/adoptopenjdk/deb groovy main" | sudo tee /etc/apt/sources.list.d/adoptopenjdk.list
+  sudo apt update
+  sudo apt install adoptopenjdk-11-hotspot
 \end{commandshell}
 
-Conviene dunque creare una nuova cartella per i repository da scaricare, e
-posizionarvici; al suo interno, creeremo anche una directory per i tool compilati:
+Conviene dunque creare nella vostra home una nuova cartella per i
+repository da scaricare e una per i tool compilati:
 
 \begin{commandshell}
+  mkdir tools
   mkdir esercitazione_mic
   cd esercitazione_mic
-  mkdir tools
 \end{commandshell}
 
 È possibile a questo punto compilare i tool (ignorando eventuali warning in fase
@@ -1097,24 +1106,20 @@ di test):
   cd ajvm
   ./gradlew build
   cd ..
-  tar -xvf mal/build/distributions/mal.tar -C tools/
-  tar -xvf ajvm/build/distributions/ajvm.tar -C tools/
+  tar -xvf mal/build/distributions/mal.tar -C ~/tools/
+  tar -xvf ajvm/build/distributions/ajvm.tar -C ~/tools/
 \end{commandshell}
 
 Per poter usare i tool nella shell attiva, le loro directory vanno aggiunte al
-path di ricerca dei binari; può essere utile a questo scopo creare un file
-\lstinline{settings.sh} con il seguente contenuto:
-
-\begin{lstlisting}
-  export PATH="$HOME/esercitazione_mic/tools/ajvm/bin:$HOME/esercitazione_mic/tools/mal/bin:$PATH"
-\end{lstlisting}
-
-Sarà dunque possibile configurare correttamente l'ambiente eseguendo
-semplicemente il comando:
+path di ricerca dei binari, ad esempio aggiungendolo in coda al file \lstinline{.bashrc} con il seguente comando:
 
 \begin{commandshell}
-  source settings.sh
+  echo 'export PATH="$HOME/tools/ajvm/bin:$HOME/tools/mal/bin:$PATH"' >> ~/.bashrc
 \end{commandshell}
+
+\begin{mynote}{}{}
+  Chiudere e riaprire la finestra del terminale per assicurarsi che il file \lstinline{.bashrc} venga riletto, dunque riposizionarsi nella directory \lstinline{esercitazione_mic} prima di continuare.
+\end{mynote}
 
 Infine, è possibile eseguire il clone del repository contenente il codice VHDL
 del processore, e predisporne la directory per la build:
@@ -1122,9 +1127,7 @@ del processore, e predisporne la directory per la build:
 \begin{commandshell}
   git clone https://github.com/albmoriconi/amic-0.git
   cd amic-0
-  mkdir build
-  cd build
-  cmake ..
+  cmake -B build
 \end{commandshell}
 
 \section{Struttura del Progetto}
@@ -1154,32 +1157,25 @@ opportuni.
 
 \section{Flow di Sviluppo}
 
-Per utilizzare il flow di sviluppo da linea di comando è necessario installare
-due tool aggiuntivi: il simulatore \lstinline{ghdl} e il visualizzatore di forme
-d'onda \lstinline{gtkwave}:
-
-\begin{commandshell}
-  sudo apt install ghdl gtkwave
-\end{commandshell}
-
-Dalla directory build è ora possibile lanciare il tool \lstinline{make} con una
-serie di target utili per lanciare microassemblatore, assemblatore e alcuni
+Si può adesso lanciare usare il tool \lstinline{cmake} con una serie
+di target utili per lanciare microassemblatore, assemblatore e alcuni
 test.
 
-In particolare, è possibile editare il microprogramma in linguaggio MAL e il
-programma in linguaggio IJVM situati rispettivamente nelle directory
-\lstinline{src/main/mal} e \lstinline{src/main/ajvm} e dunque rigenerare control
-store e RAM lanciando, dalla directory \lstinline{build}, i target:
+In particolare, è possibile editare il microprogramma in linguaggio
+MAL e il programma in linguaggio IJVM situati rispettivamente nelle
+directory \lstinline{src/main/mal} e \lstinline{src/main/ajvm} e
+dunque rigenerare control store e RAM lanciando, dalla directory
+\lstinline{build}, i target:
 
 \begin{commandshell}
-  make create_control_store
-  make create_ram
+  cmake --build build --target create_control_store
+  cmake --build build --target create_ram
 \end{commandshell}
 
 Il target \lstinline{check} lancia invece i testbench contenuti nella directory
 \lstinline{src/test/vhdl}:
 \begin{commandshell}
-  make check
+  cmake --build build --target check
 \end{commandshell}
 
 \begin{warningbox}{}{}

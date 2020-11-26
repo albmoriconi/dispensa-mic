@@ -35,6 +35,7 @@
   colback=black,
   colupper=white,
   breakable,
+  minted language=bash,
   colframe=yellow!75!black,
   listing only,
   boxsep=0.5mm,
@@ -867,10 +868,14 @@ F:
   \frametitle{Installazione dei Tool}
   In caso di dubbi, fare riferimento alle dispense per la procedura dettagliata.
 \begin{commandshell}
-sudo apt install git gradle cmake ghdl gtkwave
+sudo apt install gcc g++ make cmake git ghdl-gcc gtkwave wget apt-transport-https gnupg
+wget -qO - https://adoptopenjdk.jfrog.io/adoptopenjdk/api/gpg/key/public | sudo apt-key add -
+echo "deb https://adoptopenjdk.jfrog.io/adoptopenjdk/deb groovy main" | sudo tee /etc/apt/sources.list.d/adoptopenjdk.list
+sudo apt update
+sudo apt install adoptopenjdk-11-hotspot
+mkdir tools
 mkdir esercitazione_mic
 cd esercitazione_mic
-mkdir tools
 git clone https://github.com/albmoriconi/mal.git
 cd mal
 ./gradlew build
@@ -879,13 +884,10 @@ git clone https://github.com/albmoriconi/ajvm.git
 cd ajvm
 ./gradlew build
 cd ..
-tar -xvf mal/build/distributions/mal.tar -C tools/
-tar -xvf ajvm/build/distributions/ajvm.tar -C tools/
+tar -xvf mal/build/distributions/mal.tar -C ~/tools/
+tar -xvf ajvm/build/distributions/ajvm.tar -C ~/tools/
+echo 'export PATH="$HOME/tools/ajvm/bin:$HOME/tools/mal/bin:$PATH"' >> ~/.bashrc
 git clone https://github.com/albmoriconi/amic-0.git
-cd amic-0
-mkdir build
-cd build
-cmake ..
 \end{commandshell}
 \end{frame}
 
